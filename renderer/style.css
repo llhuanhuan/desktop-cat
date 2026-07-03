@@ -1,0 +1,235 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+#cat-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  cursor: grab;
+}
+
+#cat-container:active {
+  cursor: grabbing;
+}
+
+/* 猫咪基础样式 */
+.cat {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.3s ease;
+}
+
+.cat-body {
+  position: relative;
+  width: 120px;
+  height: 100px;
+}
+
+.cat-head {
+  position: relative;
+  width: 80px;
+  height: 70px;
+  background: #FF9F43;
+  border-radius: 50% 50% 45% 45%;
+  margin: 0 auto;
+  z-index: 2;
+}
+
+/* 耳朵 */
+.ear {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-bottom: 25px solid #FF9F43;
+  top: -15px;
+}
+
+.ear.left {
+  left: 5px;
+  transform: rotate(-10deg);
+}
+
+.ear.right {
+  right: 5px;
+  transform: rotate(10deg);
+}
+
+.ear::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 15px solid #FFB973;
+  top: 8px;
+  left: -8px;
+}
+
+/* 脸部 */
+.face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 20px;
+}
+
+/* 眼睛 */
+.eye {
+  position: absolute;
+  width: 12px;
+  height: 14px;
+  background: #2C3E50;
+  border-radius: 50%;
+  top: 25px;
+}
+
+.eye.left {
+  left: 20px;
+}
+
+.eye.right {
+  right: 20px;
+}
+
+.eye::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+}
+
+/* 鼻子 */
+.nose {
+  position: absolute;
+  width: 8px;
+  height: 6px;
+  background: #E17055;
+  border-radius: 50%;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 嘴巴 */
+.mouth {
+  position: absolute;
+  width: 20px;
+  height: 10px;
+  border-bottom: 2px solid #2C3E50;
+  border-radius: 0 0 50% 50%;
+  top: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 尾巴 */
+.cat-tail {
+  position: absolute;
+  width: 60px;
+  height: 20px;
+  background: #FF9F43;
+  border-radius: 0 0 50% 50%;
+  bottom: 0;
+  right: -20px;
+  transform-origin: left center;
+  animation: tailWag 2s infinite;
+}
+
+@keyframes tailWag {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(10deg); }
+}
+
+/* 空闲状态动画 */
+.cat.idle {
+  animation: idleBounce 3s infinite;
+}
+
+@keyframes idleBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-5px); }
+}
+
+/* 任务完成状态 */
+.cat.happy {
+  animation: happyJump 0.5s ease-out;
+}
+
+@keyframes happyJump {
+  0% { transform: translateX(-50%) translateY(0) scale(1); }
+  50% { transform: translateX(-50%) translateY(-30px) scale(1.1); }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.cat.happy .eye {
+  height: 5px;
+  top: 30px;
+  border-radius: 50% 50% 0 0;
+}
+
+.cat.happy .mouth {
+  height: 15px;
+  border-bottom: none;
+  border-top: 2px solid #2C3E50;
+  border-radius: 50% 50% 0 0;
+  top: 42px;
+}
+
+/* 通知样式 */
+.notification {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(46, 204, 113, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: 'Microsoft YaHei', sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.notification.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+.notification.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 眨眼动画 */
+.cat.idle .eye {
+  animation: blink 4s infinite;
+}
+
+@keyframes blink {
+  0%, 95%, 100% { height: 14px; top: 25px; }
+  97% { height: 2px; top: 31px; }
+}
