@@ -4,7 +4,7 @@ console.log('[Desktop Cat] Starting...');
 // 在 Electron 主进程中，require('electron') 应该返回 API 对象
 // 但根据版本不同，可能需要不同的处理方式
 
-let app, BrowserWindow, Tray, Menu, ipcMain, nativeImage;
+let app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, Notification;
 
 // 尝试方式1: 直接 require('electron')
 const electron = require('electron');
@@ -12,7 +12,7 @@ console.log('[Desktop Cat] require("electron"):', typeof electron);
 
 if (typeof electron === 'object' && electron.app) {
   // 标准方式
-  ({ app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = electron);
+  ({ app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, Notification } = electron);
   console.log('[Desktop Cat] Loaded via require("electron")');
 } else if (typeof electron === 'string') {
   // 返回的是路径，说明不是在 Electron 主进程中
@@ -118,10 +118,29 @@ function createTray() {
 }
 
 function notifyTaskDone(message) {
+  // 发送系统通知
+  if (Notification && Notification.isSupported()) {
+    const notification = new Notification({
+      title: 'Desktop Cat',
+      body: message,
+      icon: null // 可以后续添加图标
+    });
+    notification.show();
+  }
+
+  // 发送应用内通知
   if (mainWindow) {
     mainWindow.webContents.send('task-done', message);
   }
 }
+
+// 处理窗口移动
+ipcMain.on('move-window', (event, deltaX, deltaY) => {
+  if (mainWindow) {
+    const [currentX, currentY] = mainWindow.getPosition();
+    mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+  }
+});
 
 function startNotificationServer() {
   const server = http.createServer((req, res) => {

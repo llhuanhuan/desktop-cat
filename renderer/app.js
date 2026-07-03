@@ -1,7 +1,5 @@
 // 猫咪状态管理
-const cat = document.getElementById('cat');
-const notification = document.getElementById('notification');
-const notificationText = notification.querySelector('.notification-text');
+let cat, notification, notificationText;
 
 let isDragging = false;
 let dragOffsetX = 0;
@@ -25,7 +23,12 @@ function initDrag() {
     const dy = e.clientY - dragOffsetY;
 
     // 通过 IPC 移动窗口
-    // 这里简化处理，实际需要与主进程通信
+    if (window.electronAPI) {
+      window.electronAPI.moveWindow(dx, dy);
+    }
+
+    dragOffsetX = e.clientX;
+    dragOffsetY = e.clientY;
   });
 
   document.addEventListener('mouseup', () => {
@@ -36,6 +39,10 @@ function initDrag() {
 
 // 显示通知
 function showNotification(message) {
+  if (!notificationText || !notification) {
+    console.error('[Desktop Cat] Notification elements not found');
+    return;
+  }
   notificationText.textContent = message;
   notification.classList.remove('hidden');
   notification.classList.add('show');
@@ -49,6 +56,7 @@ function showNotification(message) {
 
 // 播放开心动画
 function playHappyAnimation() {
+  if (!cat) return;
   cat.classList.remove('idle');
   cat.classList.add('happy');
 
@@ -69,25 +77,31 @@ function playMeow() {
   // audio.play().catch(e => console.log('Audio play failed:', e));
 }
 
-// 监听任务完成事件
-if (window.electronAPI) {
-  window.electronAPI.onTaskDone((message) => {
-    console.log('[Desktop Cat] Task done:', message);
-    playHappyAnimation();
-    playMeow();
-  });
-}
-
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
-  initDrag();
-  console.log('[Desktop Cat] Initialized');
-});
+  // 获取 DOM 元素
+  cat = document.getElementById('cat');
+  notification = document.getElementById('notification');
+  notificationText = notification.querySelector('.notification-text');
 
-// 点击猫咪
-cat.addEventListener('click', () => {
-  if (!isDragging) {
-    playHappyAnimation();
-    showNotification('喵~ 🐱');
+  initDrag();
+
+  // 监听任务完成事件
+  if (window.electronAPI) {
+    window.electronAPI.onTaskDone((message) => {
+      console.log('[Desktop Cat] Task done:', message);
+      playHappyAnimation();
+      playMeow();
+    });
   }
+
+  // 点击猫咪
+  cat.addEventListener('click', () => {
+    if (!isDragging) {
+      playHappyAnimation();
+      showNotification('喵~ 🐱');
+    }
+  });
+
+  console.log('[Desktop Cat] Initialized');
 });

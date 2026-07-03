@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   removeTaskDoneListener: () => {
     ipcRenderer.removeAllListeners('task-done');
+  },
+  moveWindow: (deltaX, deltaY) => {
+    ipcRenderer.send('move-window', deltaX, deltaY);
   }
 });

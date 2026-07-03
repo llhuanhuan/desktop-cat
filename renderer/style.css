@@ -199,7 +199,7 @@ body {
 /* 通知样式 */
 .notification {
   position: absolute;
-  top: 0;
+  bottom: 130px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(46, 204, 113, 0.9);
@@ -212,6 +212,7 @@ body {
   opacity: 0;
   transition: all 0.3s ease;
   pointer-events: none;
+  z-index: 10;
 }
 
 .notification.show {
