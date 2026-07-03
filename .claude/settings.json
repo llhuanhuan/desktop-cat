@@ -1,0 +1,11 @@
+{
+    "hooks": {
+        "afterResponse": {
+            "command": "node",
+            "args": [
+                "e:/AI/desktop-cat/claude-hook.js",
+                "Claude Code \u4efb\u52a1\u5df2\u5b8c\u6210\uff01"
+            ]
+        }
+    }
+}
