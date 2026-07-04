@@ -146,6 +146,7 @@ function createTray() {
 // 状态通知
 // ============================================
 function notifyStateChange(state, event, detail, project) {
+  console.log(`[Desktop Cat] State change: ${state} (event: ${event}, project: ${project})`);
   if (mainWindow) {
     mainWindow.webContents.send('state-change', { state, event, detail, project });
   }
