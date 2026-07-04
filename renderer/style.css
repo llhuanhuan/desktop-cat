@@ -84,7 +84,7 @@ html, body {
 }
 
 /* ============================================
-   气泡消息
+   气泡消息 - 支持长消息显示
    ============================================ */
 .bubble {
   position: absolute;
@@ -103,6 +103,9 @@ html, body {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), visibility 0.3s;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bubble::after {

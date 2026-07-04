@@ -66,8 +66,10 @@ const sound = {
     // 预加载音效文件
     const files = {
       meow1: 'sounds/meow1.mp3',
-      meow2: 'sounds/meow2.mp3',
       meow3: 'sounds/meow3.mp3',
+      meow4: 'sounds/meow4.mp3',
+      meow5: 'sounds/meow5.mp3',
+      meow6: 'sounds/meow6.mp3',
       purr1: 'sounds/purr1.mp3',
       happy1: 'sounds/happy1.mp3'
     };
@@ -89,12 +91,12 @@ const sound = {
 
     // 音效映射
     const soundMap = {
-      'meow': ['meow1', 'meow2', 'meow3'],  // 随机选择一个猫叫
-      'click': ['purr1'],                     // 呼噜声
-      'happy': ['happy1'],                    // 开心
-      'error': ['meow3'],                     // 不满用低沉的猫叫
-      'thinking': ['meow2'],                  // 轻柔的猫叫
-      'sleep': ['purr1']                      // 呼噜声
+      'meow': ['meow1', 'meow3', 'meow4', 'meow5', 'meow6'],  // 随机选择一个猫叫
+      'click': ['purr1'],                                       // 呼噜声
+      'happy': ['happy1'],                                      // 开心
+      'error': ['meow3'],                                       // 不满
+      'thinking': ['meow1'],                                    // 轻柔的猫叫
+      'sleep': ['purr1']                                        // 呼噜声
     };
 
     const sounds = soundMap[type] || ['meow1'];
@@ -178,11 +180,33 @@ function setState(state, duration) {
 }
 
 // ============================================
-// 气泡
+// 气泡 - 支持长消息显示
 // ============================================
 function showBubble(text, duration = 2000) {
   if (!bubble) return;
-  bubbleText.textContent = text;
+
+  // 截断长消息，保留完整信息
+  const maxLength = 100;
+  const isLong = text.length > maxLength;
+  const displayText = isLong ? text.substring(0, maxLength) + '...' : text;
+
+  bubbleText.textContent = displayText;
+
+  // 如果是长消息，添加 title 属性用于悬停显示完整内容
+  if (isLong) {
+    bubble.title = text;
+    bubble.style.cursor = 'pointer';
+
+    // 点击气泡显示完整消息
+    bubble.onclick = () => {
+      alert(text);
+    };
+  } else {
+    bubble.title = '';
+    bubble.style.cursor = 'default';
+    bubble.onclick = null;
+  }
+
   bubble.classList.add('show');
   setTimeout(() => bubble.classList.remove('show'), duration);
 }

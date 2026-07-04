@@ -14,21 +14,46 @@ const http = require('http');
 const PORT = 18923;
 const TIMEOUT_MS = 500;
 
-// Claude Code 事件 → 猫咪状态映射
+// Claude Code 事件 → 猫咪状态映射（增强版）
 const STATE_MAP = {
+  // 会话事件
   'SessionStart': 'idle',
+  'SessionEnd': 'idle',
+
+  // 用户输入
   'UserPromptSubmit': 'thinking',
+
+  // 工具调用事件 - 细化状态
   'PreToolUse': 'working',
   'PostToolUse': 'working',
   'PostToolUseFailure': 'error',
+
+  // 任务完成事件
   'Stop': 'happy',
   'StopFailure': 'error',
+
+  // 子代理事件
   'SubagentStart': 'working',
   'SubagentStop': 'working',
+
+  // 压缩事件
   'PreCompact': 'working',
   'PostCompact': 'happy',
+
+  // 通知事件
   'Notification': 'happy',
-  'SessionEnd': 'idle'
+
+  // 新增：思考状态
+  'PreApiCall': 'thinking',
+  'PostApiCall': 'thinking',
+
+  // 新增：文件操作
+  'FileRead': 'working',
+  'FileWrite': 'working',
+
+  // 新增：搜索操作
+  'SearchStart': 'working',
+  'SearchEnd': 'working'
 };
 
 async function readStdin() {
