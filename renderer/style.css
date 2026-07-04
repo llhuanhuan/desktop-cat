@@ -234,3 +234,135 @@ body {
   0%, 95%, 100% { height: 14px; top: 25px; }
   97% { height: 2px; top: 31px; }
 }
+
+/* 点击动画 */
+.cat.click {
+  animation: clickBounce 0.3s ease-out;
+}
+
+@keyframes clickBounce {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(0.9); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* 悬停动画 */
+.cat.hover {
+  animation: hoverWiggle 0.5s ease-in-out;
+}
+
+@keyframes hoverWiggle {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-3deg); }
+  75% { transform: translateX(-50%) rotate(3deg); }
+}
+
+.cat.hover .tail {
+  animation: tailWagFast 0.5s infinite;
+}
+
+@keyframes tailWagFast {
+  0%, 100% { transform: rotate(-15deg); }
+  50% { transform: rotate(15deg); }
+}
+
+/* 通知类型样式 */
+.notification.success {
+  background: rgba(46, 204, 113, 0.9);
+}
+
+.notification.info {
+  background: rgba(52, 152, 219, 0.9);
+}
+
+.notification.warning {
+  background: rgba(241, 196, 15, 0.9);
+}
+
+/* 粒子效果 */
+.particle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  animation: particleFade 1s ease-out forwards;
+}
+
+.particle.heart {
+  animation: heartFloat 1s ease-out forwards;
+}
+
+@keyframes heartFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(1.2);
+  }
+}
+
+.particle.star {
+  animation: starTwinkle 0.8s ease-out forwards;
+}
+
+@keyframes starTwinkle {
+  0% {
+    opacity: 1;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(360deg);
+  }
+}
+
+.particle.firework {
+  animation: fireworkBurst 1s ease-out forwards;
+}
+
+@keyframes fireworkBurst {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-30px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.5);
+  }
+}
+
+@keyframes particleFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 猫咪开心时眼睛变化增强 */
+.cat.happy .eye {
+  animation: happyEyes 0.5s ease-out;
+}
+
+@keyframes happyEyes {
+  0% { height: 14px; }
+  50% { height: 3px; }
+  100% { height: 5px; }
+}
+
+/* 猫咪开心时嘴巴变化增强 */
+.cat.happy .mouth {
+  animation: happyMouth 0.5s ease-out;
+}
+
+@keyframes happyMouth {
+  0% { height: 10px; }
+  50% { height: 18px; }
+  100% { height: 15px; }
+}
