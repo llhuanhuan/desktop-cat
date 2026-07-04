@@ -62,25 +62,25 @@ function createAnchorWindow() {
   // 加载一个空白页面
   anchorWindow.loadURL('data:text/html,<html><body style="background:#00000000"></body></html>');
 
-  // 关键：先显示窗口让任务栏图标出现，然后立即隐藏
+  // 关键：先显示窗口让任务栏图标出现，然后最小化
   anchorWindow.once('ready-to-show', () => {
     anchorWindow.show();
-    // 短暂延迟后隐藏，确保任务栏图标已注册
+    // 短暂延迟后最小化，确保任务栏图标已注册
     setTimeout(() => {
-      anchorWindow.hide();
-      console.log('[Desktop Cat] Anchor window hidden, taskbar icon should persist');
+      anchorWindow.minimize();
+      console.log('[Desktop Cat] Anchor window minimized, taskbar icon should persist');
     }, 100);
   });
 
   // 点击任务栏图标时显示主窗口
-  anchorWindow.on('show', () => {
+  anchorWindow.on('restore', () => {
     if (mainWindow) {
       mainWindow.show();
       mainWindow.focus();
     }
-    // 隐藏锚点窗口
+    // 再次最小化锚点窗口
     setTimeout(() => {
-      if (anchorWindow) anchorWindow.hide();
+      if (anchorWindow) anchorWindow.minimize();
     }, 50);
   });
 
