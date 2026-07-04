@@ -1,6 +1,5 @@
 /* ============================================
-   Kawaii Desktop Cat - 超可爱猫咪设计
-   设计原则：大头小身、大眼睛、圆润柔软、柔和配色
+   Desktop Cat - SVG 猫咪样式
    ============================================ */
 
 * {
@@ -19,7 +18,7 @@ body {
 #cat-container {
   position: relative;
   width: 160px;
-  height: 200px;
+  height: 180px;
   cursor: grab;
 }
 
@@ -27,362 +26,102 @@ body {
   cursor: grabbing;
 }
 
-/* ============================================
-   猫咪主体 - 大头小身比例
-   ============================================ */
+/* 猫咪容器 */
 .cat {
   position: absolute;
-  bottom: 20px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
+  width: 160px;
+  height: 160px;
 }
 
-/* ============================================
-   头部 - 占身体 50% 以上
-   ============================================ */
-.head {
-  position: relative;
-  width: 100px;
-  height: 95px;
-  background: #F4A460;
-  border-radius: 50% 50% 45% 45%;
-  z-index: 3;
-  /* 柔和的阴影 */
-  box-shadow:
-    inset 0 -8px 15px rgba(218, 145, 80, 0.3),
-    0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 耳朵 - 小三角 */
-.ear {
-  position: absolute;
-  width: 30px;
-  height: 35px;
-  background: #F4A460;
-  top: -10px;
-  z-index: 2;
-}
-
-.ear.left {
-  left: 10px;
-  border-radius: 50% 50% 30% 70%;
-  transform: rotate(-20deg);
-}
-
-.ear.right {
-  right: 10px;
-  border-radius: 50% 50% 70% 30%;
-  transform: rotate(20deg);
-}
-
-.ear-inner {
-  position: absolute;
-  width: 16px;
-  height: 20px;
-  background: #FFD4B8;
-  top: 10px;
-  left: 50%;
-}
-
-.ear.left .ear-inner {
-  border-radius: 50% 50% 30% 70%;
-  transform: translateX(-60%);
-}
-
-.ear.right .ear-inner {
-  border-radius: 50% 50% 70% 30%;
-  transform: translateX(-40%);
-}
-
-/* ============================================
-   眼睛 - 大而圆，有神采
-   ============================================ */
-.eye {
-  position: absolute;
-  width: 28px;
-  height: 30px;
-  top: 25px;
-  z-index: 1;
-}
-
-.eye.left {
-  left: 16px;
-}
-
-.eye.right {
-  right: 16px;
-}
-
-.eye-white {
+/* SVG 对象 */
+#cat-svg {
   width: 100%;
   height: 100%;
-  background: white;
-  border-radius: 50%;
-  overflow: hidden;
-  position: relative;
-  /* 眼睛轮廓 */
-  box-shadow: 0 0 0 2px #5D4037;
+  pointer-events: none;
 }
 
-.iris {
-  position: absolute;
-  width: 18px;
-  height: 20px;
-  background: #5D4037;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -45%);
+/* ============================================
+   动画 - 空闲状态
+   ============================================ */
+.cat.idle {
+  animation: idle-breathe 3s ease-in-out infinite;
 }
 
-.pupil {
-  position: absolute;
-  width: 10px;
-  height: 12px;
-  background: #1A1A1A;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+@keyframes idle-breathe {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-5px); }
 }
 
-/* 眼睛高光 - 让眼睛有神 */
-.shine {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  background: white;
-  border-radius: 50%;
-  top: 3px;
-  right: 2px;
-  z-index: 2;
+/* ============================================
+   动画 - 开心状态
+   ============================================ */
+.cat.happy {
+  animation: happy-jump 0.6s ease-out;
 }
 
-.shine::after {
-  content: '';
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: white;
-  border-radius: 50%;
-  bottom: -2px;
-  left: -4px;
-  opacity: 0.7;
+@keyframes happy-jump {
+  0% { transform: translateX(-50%) scale(1); }
+  20% { transform: translateX(-50%) translateY(-30px) scale(1.1); }
+  40% { transform: translateX(-50%) translateY(-25px) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
 }
 
-/* 眼皮 - 用于眨眼和表情 */
-.eyelid {
+/* ============================================
+   动画 - 点击状态
+   ============================================ */
+.cat.click {
+  animation: click-squish 0.4s ease-out;
+}
+
+@keyframes click-squish {
+  0% { transform: translateX(-50%) scale(1); }
+  30% { transform: translateX(-50%) scale(0.9, 1.1); }
+  60% { transform: translateX(-50%) scale(1.05, 0.95); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ============================================
+   动画 - 悬停状态
+   ============================================ */
+.cat.hover {
+  animation: hover-wiggle 0.5s ease-in-out;
+}
+
+@keyframes hover-wiggle {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-3deg); }
+  75% { transform: translateX(-50%) rotate(3deg); }
+}
+
+/* ============================================
+   动画 - 睡眠状态
+   ============================================ */
+.cat.sleeping {
+  animation: sleep-breathe 4s ease-in-out infinite;
+}
+
+@keyframes sleep-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.02, 0.98); }
+}
+
+/* 睡眠时显示 Zzz */
+.cat.sleeping::after {
+  content: '💤';
   position: absolute;
-  width: 100%;
-  height: 0%;
-  background: #F4A460;
   top: 0;
-  left: 0;
-  border-radius: 50% 50% 0 0;
-  z-index: 3;
-  transition: height 0.15s ease;
-}
-
-/* ============================================
-   腮红 - 可爱必备
-   ============================================ */
-.cheek {
-  position: absolute;
-  width: 18px;
-  height: 12px;
-  background: rgba(255, 154, 139, 0.5);
-  border-radius: 50%;
-  top: 50px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.cheek.left {
-  left: 5px;
-}
-
-.cheek.right {
-  right: 5px;
-}
-
-/* ============================================
-   鼻子和嘴巴 - 小巧精致
-   ============================================ */
-.nose-area {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-}
-
-.nose {
-  width: 8px;
-  height: 6px;
-  background: #E8A0BF;
-  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
-  margin: 0 auto;
-}
-
-.mouth {
-  width: 16px;
-  height: 8px;
-  margin: 2px auto 0;
-  position: relative;
-}
-
-.mouth::before,
-.mouth::after {
-  content: '';
-  position: absolute;
-  width: 8px;
-  height: 6px;
-  border-bottom: 2px solid #5D4037;
-  border-radius: 0 0 50% 50%;
-  top: 0;
-}
-
-.mouth::before {
-  left: 0;
-}
-
-.mouth::after {
-  right: 0;
-}
-
-/* ============================================
-   胡须 - 细长优雅
-   ============================================ */
-.whisker {
-  position: absolute;
-  width: 25px;
-  height: 1.5px;
-  background: #8D6E63;
-  top: 55px;
-  opacity: 0.5;
-}
-
-.whisker.left {
-  left: -18px;
-  transform-origin: right center;
-}
-
-.whisker.right {
-  right: -18px;
-  transform-origin: left center;
-}
-
-.whisker.top {
-  transform: rotate(-10deg);
-  top: 50px;
-}
-
-.whisker.mid {
-  transform: rotate(0deg);
-}
-
-.whisker.bot {
-  transform: rotate(10deg);
-  top: 60px;
-}
-
-/* ============================================
-   身体 - 圆润胖乎乎
-   ============================================ */
-.body {
-  position: relative;
-  width: 85px;
-  height: 65px;
-  margin: -10px auto 0;
-  z-index: 2;
-}
-
-.body-main {
-  width: 100%;
-  height: 100%;
-  background: #F4A460;
-  border-radius: 50% 50% 45% 45%;
-  box-shadow: inset 0 -5px 10px rgba(218, 145, 80, 0.3);
-}
-
-.belly {
-  position: absolute;
-  width: 50px;
-  height: 40px;
-  background: #FFF8E7;
-  border-radius: 50%;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* ============================================
-   腿 - 短小可爱
-   ============================================ */
-.leg {
-  position: absolute;
-  width: 20px;
-  height: 22px;
-  background: #F4A460;
-  border-radius: 40% 40% 50% 50%;
-  z-index: 1;
-}
-
-/* 脚掌 */
-.leg::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 22px;
-  height: 10px;
-  background: #FFF8E7;
-  border-radius: 50%;
-}
-
-.leg.front-left {
-  top: 50px;
-  left: 10px;
-}
-
-.leg.front-right {
-  top: 50px;
   right: 10px;
+  font-size: 16px;
+  animation: zzz 2s ease-in-out infinite;
 }
 
-.leg.back-left {
-  top: 55px;
-  left: 18px;
-}
-
-.leg.back-right {
-  top: 55px;
-  right: 18px;
-}
-
-/* ============================================
-   尾巴 - 弯曲可爱
-   ============================================ */
-.tail {
-  position: absolute;
-  bottom: 30px;
-  right: -10px;
-  width: 40px;
-  height: 50px;
-  z-index: 0;
-  transform-origin: left bottom;
-}
-
-.tail::before {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 7px solid #F4A460;
-  border-color: #F4A460 transparent transparent transparent;
-  border-radius: 60% 40% 0 0;
-  transform: rotate(-20deg);
+@keyframes zzz {
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-15px); }
+  100% { opacity: 0; transform: translateY(-30px); }
 }
 
 /* ============================================
@@ -390,7 +129,7 @@ body {
    ============================================ */
 .bubble {
   position: absolute;
-  top: -25px;
+  top: -20px;
   left: 50%;
   transform: translateX(-50%) scale(0);
   background: white;
@@ -399,7 +138,7 @@ body {
   font-size: 12px;
   font-family: 'Microsoft YaHei', sans-serif;
   color: #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   white-space: nowrap;
   z-index: 20;
   opacity: 0;
@@ -420,191 +159,7 @@ body {
 .bubble.show {
   opacity: 1;
   transform: translateX(-50%) scale(1);
-  top: -35px;
-}
-
-/* ============================================
-   动画 - 空闲状态
-   ============================================ */
-.cat.idle {
-  animation: idle-breathe 3s ease-in-out infinite;
-}
-
-@keyframes idle-breathe {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-4px); }
-}
-
-/* 空闲时眨眼 */
-.cat.idle .eyelid {
-  animation: blink 4s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 94%, 100% { height: 0%; }
-  96% { height: 100%; }
-}
-
-/* 空闲时尾巴摆动 */
-.cat.idle .tail {
-  animation: tail-sway 2.5s ease-in-out infinite;
-}
-
-@keyframes tail-sway {
-  0%, 100% { transform: rotate(-5deg); }
-  50% { transform: rotate(10deg); }
-}
-
-/* 空闲时腿部微动 */
-.cat.idle .leg {
-  animation: leg-twitch 4s ease-in-out infinite;
-}
-
-.cat.idle .leg.front-right,
-.cat.idle .leg.back-left {
-  animation-delay: 1s;
-}
-
-@keyframes leg-twitch {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
-}
-
-/* ============================================
-   动画 - 开心状态
-   ============================================ */
-.cat.happy {
-  animation: happy-jump 0.5s ease-out;
-}
-
-@keyframes happy-jump {
-  0% { transform: translateX(-50%) scale(1); }
-  30% { transform: translateX(-50%) translateY(-25px) scale(1.05); }
-  60% { transform: translateX(-50%) translateY(-20px) scale(1.02); }
-  100% { transform: translateX(-50%) scale(1); }
-}
-
-/* 开心时眯眼 */
-.cat.happy .eyelid {
-  animation: happy-eyes 0.5s ease-out;
-}
-
-@keyframes happy-eyes {
-  0% { height: 0%; }
-  30% { height: 60%; }
-  100% { height: 50%; }
-}
-
-/* 开心时腮红 */
-.cat.happy .cheek {
-  opacity: 1;
-}
-
-/* 开心时嘴巴张开 */
-.cat.happy .mouth::before,
-.cat.happy .mouth::after {
-  animation: happy-mouth 0.5s ease-out;
-}
-
-@keyframes happy-mouth {
-  0% { height: 6px; }
-  30% { height: 8px; }
-  100% { height: 7px; }
-}
-
-/* 开心时尾巴快摇 */
-.cat.happy .tail {
-  animation: happy-tail 0.2s ease-in-out 5;
-}
-
-@keyframes happy-tail {
-  0%, 100% { transform: rotate(-10deg); }
-  50% { transform: rotate(20deg); }
-}
-
-/* ============================================
-   动画 - 点击状态
-   ============================================ */
-.cat.click {
-  animation: click-squish 0.3s ease-out;
-}
-
-@keyframes click-squish {
-  0% { transform: translateX(-50%) scale(1); }
-  30% { transform: translateX(-50%) scale(0.92, 1.08); }
-  60% { transform: translateX(-50%) scale(1.05, 0.95); }
-  100% { transform: translateX(-50%) scale(1); }
-}
-
-/* 点击时头部歪 */
-.cat.click .head {
-  animation: head-tilt 0.3s ease-out;
-}
-
-@keyframes head-tilt {
-  0% { transform: rotate(0deg); }
-  40% { transform: rotate(-8deg); }
-  100% { transform: rotate(0deg); }
-}
-
-/* ============================================
-   动画 - 悬停状态
-   ============================================ */
-.cat.hover .cheek {
-  opacity: 0.7;
-}
-
-.cat.hover .tail {
-  animation: hover-tail 0.3s ease-in-out infinite;
-}
-
-@keyframes hover-tail {
-  0%, 100% { transform: rotate(-8deg); }
-  50% { transform: rotate(15deg); }
-}
-
-.cat.hover .whisker {
-  animation: whisker-wiggle 0.5s ease-in-out infinite;
-}
-
-@keyframes whisker-wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(5deg); }
-}
-
-/* ============================================
-   动画 - 睡眠状态
-   ============================================ */
-.cat.sleeping {
-  animation: sleep-breathe 3s ease-in-out infinite;
-}
-
-@keyframes sleep-breathe {
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.02, 0.98); }
-}
-
-.cat.sleeping .eyelid {
-  height: 70%;
-}
-
-.cat.sleeping .pupil {
-  opacity: 0;
-}
-
-.cat.sleeping::after {
-  content: '💤';
-  position: absolute;
-  top: -15px;
-  right: -5px;
-  font-size: 14px;
-  animation: zzz 2s ease-in-out infinite;
-}
-
-@keyframes zzz {
-  0% { opacity: 0; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-12px); }
-  100% { opacity: 0; transform: translateY(-24px); }
+  top: -30px;
 }
 
 /* ============================================
@@ -614,7 +169,7 @@ body {
   position: absolute;
   pointer-events: none;
   z-index: 30;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .particle.heart {
@@ -632,16 +187,16 @@ body {
 
 @keyframes star-pop {
   0% { opacity: 1; transform: scale(0); }
-  50% { opacity: 1; transform: scale(1.2); }
+  50% { opacity: 1; transform: scale(1.3); }
   100% { opacity: 0; transform: scale(0); }
 }
 
 .particle.sparkle {
-  animation: sparkle 0.8s ease-out forwards;
+  animation: sparkle-float 1s ease-out forwards;
 }
 
-@keyframes sparkle {
+@keyframes sparkle-float {
   0% { opacity: 1; transform: translateY(0) scale(0); }
-  30% { opacity: 1; transform: translateY(-15px) scale(1); }
-  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+  30% { opacity: 1; transform: translateY(-20px) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.5); }
 }

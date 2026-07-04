@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+  <!-- 尾巴 -->
+  <g class="tail">
+    <path d="M 160 140 Q 180 120 170 90 Q 165 70 175 60" stroke="#F4A460" stroke-width="10" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- 身体 -->
+  <g class="body">
+    <ellipse cx="100" cy="145" rx="50" ry="40" fill="#F4A460"/>
+    <ellipse cx="100" cy="150" rx="35" ry="28" fill="#FFF8E7"/>
+  </g>
+
+  <!-- 后腿 -->
+  <g class="legs back">
+    <ellipse cx="70" cy="175" rx="15" ry="10" fill="#F4A460"/>
+    <ellipse cx="130" cy="175" rx="15" ry="10" fill="#F4A460"/>
+    <!-- 肉垫 -->
+    <ellipse cx="70" cy="178" rx="10" ry="6" fill="#FFD4B8"/>
+    <ellipse cx="130" cy="178" rx="10" ry="6" fill="#FFD4B8"/>
+  </g>
+
+  <!-- 前腿 -->
+  <g class="legs front">
+    <rect x="60" y="150" width="18" height="25" rx="9" fill="#F4A460"/>
+    <rect x="122" y="150" width="18" height="25" rx="9" fill="#F4A460"/>
+    <!-- 肉垫 -->
+    <ellipse cx="69" cy="178" rx="10" ry="6" fill="#FFD4B8"/>
+    <ellipse cx="131" cy="178" rx="10" ry="6" fill="#FFD4B8"/>
+  </g>
+
+  <!-- 头部 -->
+  <g class="head">
+    <!-- 耳朵 -->
+    <path d="M 55 70 L 45 35 L 75 60 Z" fill="#F4A460"/>
+    <path d="M 145 70 L 155 35 L 125 60 Z" fill="#F4A460"/>
+    <!-- 耳朵内部 -->
+    <path d="M 60 65 L 52 42 L 72 58 Z" fill="#FFD4B8"/>
+    <path d="M 140 65 L 148 42 L 128 58 Z" fill="#FFD4B8"/>
+
+    <!-- 脸 -->
+    <circle cx="100" cy="85" r="45" fill="#F4A460"/>
+
+    <!-- 眼睛白 -->
+    <circle cx="80" cy="80" r="14" fill="white" stroke="#5D4037" stroke-width="1.5"/>
+    <circle cx="120" cy="80" r="14" fill="white" stroke="#5D4037" stroke-width="1.5"/>
+
+    <!-- 虹膜 -->
+    <circle cx="80" cy="82" r="9" fill="#5D4037"/>
+    <circle cx="120" cy="82" r="9" fill="#5D4037"/>
+
+    <!-- 瞳孔 -->
+    <circle cx="80" cy="83" r="5" fill="#1A1A1A"/>
+    <circle cx="120" cy="83" r="5" fill="#1A1A1A"/>
+
+    <!-- 眼睛高光 -->
+    <circle cx="84" cy="78" r="3" fill="white"/>
+    <circle cx="124" cy="78" r="3" fill="white"/>
+    <circle cx="78" cy="85" r="1.5" fill="white" opacity="0.7"/>
+    <circle cx="118" cy="85" r="1.5" fill="white" opacity="0.7"/>
+
+    <!-- 腮红 -->
+    <ellipse cx="62" cy="95" rx="10" ry="6" fill="#FF9A8B" opacity="0.4"/>
+    <ellipse cx="138" cy="95" rx="10" ry="6" fill="#FF9A8B" opacity="0.4"/>
+
+    <!-- 鼻子 -->
+    <ellipse cx="100" cy="98" rx="5" ry="4" fill="#E8A0BF"/>
+
+    <!-- 嘴巴 -->
+    <path d="M 92 104 Q 100 112 108 104" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <!-- 胡须 -->
+    <line x1="55" y1="90" x2="30" y2="85" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+    <line x1="55" y1="95" x2="28" y2="95" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+    <line x1="55" y1="100" x2="30" y2="105" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+    <line x1="145" y1="90" x2="170" y2="85" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+    <line x1="145" y1="95" x2="172" y2="95" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+    <line x1="145" y1="100" x2="170" y2="105" stroke="#8D6E63" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- 眼皮（用于动画） -->
+  <g class="eyelids">
+    <ellipse cx="80" cy="80" rx="14" ry="0" fill="#F4A460" class="eyelid-left">
+      <animate attributeName="ry" values="0;0;14;0;0" dur="4s" repeatCount="indefinite" keyTimes="0;0.94;0.96;0.98;1"/>
+    </ellipse>
+    <ellipse cx="120" cy="80" rx="14" ry="0" fill="#F4A460" class="eyelid-right">
+      <animate attributeName="ry" values="0;0;14;0;0" dur="4s" repeatCount="indefinite" keyTimes="0;0.94;0.96;0.98;1"/>
+    </ellipse>
+  </g>
+</svg>

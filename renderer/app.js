@@ -1,10 +1,9 @@
 // ============================================
-// Desktop Cat - 交互控制器
+// Desktop Cat - SVG 猫咪交互控制器
 // ============================================
 
 // 状态管理
-let cat, head, body, tail;
-let bubble, bubbleText;
+let cat, catSvg, bubble, bubbleText;
 let isDragging = false;
 let dragStartX = 0, dragStartY = 0;
 let currentState = 'idle';
@@ -26,9 +25,6 @@ const sound = {
   play(type) {
     if (!this.enabled) return;
     this.init();
-
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
 
     switch (type) {
       case 'meow':
@@ -53,13 +49,11 @@ const sound = {
 
     osc.type = type;
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
     gain.gain.setValueAtTime(volume, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
-
     osc.start();
     osc.stop(ctx.currentTime + duration);
   },
@@ -87,9 +81,9 @@ const particles = {
     const sparkles = ['✨', '💫', '🌟'];
     for (let i = 0; i < 5; i++) {
       setTimeout(() => {
-        const ox = (Math.random() - 0.5) * 60;
+        const ox = (Math.random() - 0.5) * 80;
         this._create(x + ox, y, sparkles[Math.floor(Math.random() * sparkles.length)], 'sparkle');
-      }, i * 80);
+      }, i * 100);
     }
   },
 
@@ -168,25 +162,67 @@ function initDrag() {
 }
 
 // ============================================
+// SVG 动画控制
+// ============================================
+function animateSVG(action) {
+  const svgDoc = document.getElementById('cat-svg');
+  if (!svgDoc || !svgDoc.contentDocument) return;
+
+  const svg = svgDoc.contentDocument;
+
+  switch (action) {
+    case 'blink':
+      // 触发眨眼 - 通过修改眼皮动画
+      const leftEyelid = svg.querySelector('.eyelid-left');
+      const rightEyelid = svg.querySelector('.eyelid-right');
+      if (leftEyelid && rightEyelid) {
+        leftEyelid.setAttribute('ry', '14');
+        rightEyelid.setAttribute('ry', '14');
+        setTimeout(() => {
+          leftEyelid.setAttribute('ry', '0');
+          rightEyelid.setAttribute('ry', '0');
+        }, 150);
+      }
+      break;
+
+    case 'happy':
+      // 让眼睛变成眯眼
+      const eyes = svg.querySelectorAll('.head circle[fill="white"]');
+      eyes.forEach(eye => {
+        eye.setAttribute('ry', '6');
+        eye.setAttribute('rx', '14');
+      });
+      setTimeout(() => {
+        eyes.forEach(eye => {
+          eye.setAttribute('ry', '14');
+          eye.setAttribute('rx', '14');
+        });
+      }, 1500);
+      break;
+  }
+}
+
+// ============================================
 // 交互动画
 // ============================================
 
 // 任务完成
 function playTaskDone() {
-  setState('happy', 1500);
+  setState('happy', 1800);
   sound.play('happy');
+  animateSVG('happy');
 
-  // 粒子
+  // 粒子效果
   const rect = cat.getBoundingClientRect();
   const container = document.getElementById('cat-container').getBoundingClientRect();
   const cx = rect.left - container.left + rect.width / 2;
-  const cy = rect.top - container.top;
+  const cy = rect.top - container.top + 20;
 
   particles.sparkle(cx, cy);
-  setTimeout(() => particles.heart(cx, cy - 20), 200);
+  setTimeout(() => particles.heart(cx, cy - 30), 300);
 
   // 气泡
-  const msgs = ['任务完成！🎉', '搞定啦！✨', '做好了！💖'];
+  const msgs = ['任务完成！🎉', '搞定啦！✨', '做好了！💖', '喵~ 完成！'];
   showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
@@ -194,6 +230,7 @@ function playTaskDone() {
 function playClick() {
   setState('click', 400);
   sound.play('click');
+  animateSVG('blink');
 
   const rect = cat.getBoundingClientRect();
   const container = document.getElementById('cat-container').getBoundingClientRect();
@@ -202,14 +239,14 @@ function playClick() {
     rect.top - container.top + 10
   );
 
-  const msgs = ['喵~ 🐱', '摸摸头~', '呼噜~', '蹭蹭~', '喜欢你！', '嘿嘿~'];
+  const msgs = ['喵~ 🐱', '摸摸头~', '呼噜~', '蹭蹭~', '喜欢你！', '嘿嘿~', '再摸摸~'];
   showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
 // 悬停
 function playHover() {
   cat.classList.add('hover');
-  showBubble('喵？', 800);
+  showBubble('喵？', 1000);
 }
 
 function stopHover() {
@@ -231,15 +268,11 @@ function toggleSleep() {
 // 初始化
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-  // 获取元素
   cat = document.getElementById('cat');
-  head = cat.querySelector('.head');
-  body = cat.querySelector('.body');
-  tail = cat.querySelector('.tail');
+  catSvg = document.getElementById('cat-svg');
   bubble = document.getElementById('bubble');
   bubbleText = bubble.querySelector('.bubble-text');
 
-  // 初始化
   initDrag();
 
   // 监听任务完成
@@ -276,17 +309,25 @@ document.addEventListener('DOMContentLoaded', () => {
     showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
 
+  // 随机眨眼
+  setInterval(() => {
+    if (currentState === 'idle' && Math.random() < 0.3) {
+      animateSVG('blink');
+    }
+  }, 5000);
+
   // 随机动作
   setInterval(() => {
     if (currentState === 'idle' && Math.random() < 0.2) {
       const rect = cat.getBoundingClientRect();
       const container = document.getElementById('cat-container').getBoundingClientRect();
-      const cx = rect.left - container.left + rect.width / 2;
-      const cy = rect.top - container.top + 10;
-      particles.star(cx, cy);
+      particles.star(
+        rect.left - container.left + rect.width / 2,
+        rect.top - container.top
+      );
       showBubble('...', 1000);
     }
-  }, 15000);
+  }, 20000);
 
-  console.log('[Desktop Cat] Initialized');
+  console.log('[Desktop Cat] Initialized with SVG');
 });
