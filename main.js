@@ -79,6 +79,10 @@ function createTray() {
   const icon = nativeImage.createEmpty();
   tray = new Tray(icon);
 
+  // 获取当前自启动状态
+  const loginSettings = app.getLoginItemSettings();
+  const isAutoLaunchEnabled = loginSettings.openAtLogin;
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '显示/隐藏',
@@ -94,6 +98,15 @@ function createTray() {
       label: '测试通知',
       click: () => {
         notifyTaskDone('测试任务已完成！');
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '开机自启动',
+      type: 'checkbox',
+      checked: isAutoLaunchEnabled,
+      click: (menuItem) => {
+        setAutoLaunch(menuItem.checked);
       }
     },
     { type: 'separator' },
@@ -123,14 +136,6 @@ function notifyTaskDone(message) {
     mainWindow.webContents.send('task-done', message);
   }
 }
-
-// 处理窗口移动
-ipcMain.on('move-window', (event, deltaX, deltaY) => {
-  if (mainWindow) {
-    const [currentX, currentY] = mainWindow.getPosition();
-    mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
-  }
-});
 
 function startNotificationServer() {
   const server = http.createServer((req, res) => {
@@ -177,25 +182,79 @@ if (!app) {
   process.exit(1);
 }
 
-app.whenReady().then(() => {
-  console.log('[Desktop Cat] App is ready');
-  createWindow();
-  createTray();
-  startNotificationServer();
+// 单实例锁 - 确保只运行一个实例
+const gotTheLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+if (!gotTheLock) {
+  console.log('[Desktop Cat] Another instance is already running, quitting...');
+  app.quit();
+} else {
+  // 第二个实例启动时，聚焦到第一个实例的窗口
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
-});
+}
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+// 设置开机自启动
+function setAutoLaunch(enable) {
+  if (app) {
+    // 获取应用根目录
+    const appPath = app.getAppPath();
+    const execPath = process.execPath;
+
+    console.log(`[Desktop Cat] Setting auto-launch: ${enable}`);
+    console.log(`[Desktop Cat] Exec path: ${execPath}`);
+    console.log(`[Desktop Cat] App path: ${appPath}`);
+
+    app.setLoginItemSettings({
+      openAtLogin: enable,
+      path: execPath,
+      args: [appPath]
+    });
+
+    console.log(`[Desktop Cat] Auto-launch ${enable ? 'enabled' : 'disabled'}`);
   }
-});
+}
 
-app.on('before-quit', () => {
-  console.log('[Desktop Cat] Quitting...');
-});
+if (gotTheLock) {
+  app.whenReady().then(() => {
+    console.log('[Desktop Cat] App is ready');
+
+    // 启用开机自启动
+    setAutoLaunch(true);
+
+    // 处理窗口移动
+    ipcMain.on('move-window', (event, deltaX, deltaY) => {
+      if (mainWindow) {
+        const [currentX, currentY] = mainWindow.getPosition();
+        mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+      }
+    });
+
+    createWindow();
+    createTray();
+    startNotificationServer();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  app.on('before-quit', () => {
+    console.log('[Desktop Cat] Quitting...');
+  });
+}
