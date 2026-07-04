@@ -8,7 +8,6 @@ const fs = require('fs');
 const os = require('os');
 
 let mainWindow;
-let anchorWindow;
 let tray;
 const PORT = 18923;
 
@@ -37,62 +36,6 @@ function saveConfig(updates) {
   } catch (e) {
     console.error('[Desktop Cat] Failed to save config:', e.message);
   }
-}
-
-// ============================================
-// 锚点窗口（任务栏图标）
-// ============================================
-function createAnchorWindow() {
-  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-flash.png');
-
-  anchorWindow = new BrowserWindow({
-    width: 300,
-    height: 300,
-    show: false,
-    skipTaskbar: false,
-    icon: iconPath,
-    title: 'Desktop Cat',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  // 加载一个空白页面
-  anchorWindow.loadURL('data:text/html,<html><body style="background:#00000000"></body></html>');
-
-  // 关键：先显示窗口让任务栏图标出现，然后最小化
-  anchorWindow.once('ready-to-show', () => {
-    anchorWindow.show();
-    // 短暂延迟后最小化，确保任务栏图标已注册
-    setTimeout(() => {
-      anchorWindow.minimize();
-      console.log('[Desktop Cat] Anchor window minimized, taskbar icon should persist');
-    }, 100);
-  });
-
-  // 点击任务栏图标时显示主窗口
-  anchorWindow.on('restore', () => {
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    // 再次最小化锚点窗口
-    setTimeout(() => {
-      if (anchorWindow) anchorWindow.minimize();
-    }, 50);
-  });
-
-  // 锚点窗口关闭时，同时关闭主窗口并退出应用
-  anchorWindow.on('closed', () => {
-    anchorWindow = null;
-    if (mainWindow) {
-      mainWindow.close();
-    }
-  });
-
-  console.log('[Desktop Cat] Anchor window created');
 }
 
 // ============================================
@@ -127,9 +70,10 @@ function createMainWindow() {
   // 默认开启点击穿透（透明区域穿透到下面窗口）
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  // 主窗口关闭时，不退出应用（锚点窗口仍在）
+  // 主窗口关闭时退出应用
   mainWindow.on('closed', () => {
     mainWindow = null;
+    app.quit();
   });
 
   // 保存位置：移动结束时
@@ -173,7 +117,7 @@ function createMainWindow() {
 // ============================================
 function createTray() {
   // 加载猫咪图标 (32x32)
-  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-flash.png');
+  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-cat.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
 
@@ -356,9 +300,6 @@ if (!gotTheLock) {
       mainWindow.show();
       mainWindow.focus();
     }
-    if (anchorWindow) {
-      anchorWindow.show();
-    }
   });
 }
 
@@ -369,10 +310,6 @@ ipcMain.on('move-window', (event, deltaX, deltaY) => {
   if (mainWindow) {
     const [currentX, currentY] = mainWindow.getPosition();
     mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
-    // 同步移动锚点窗口
-    if (anchorWindow) {
-      anchorWindow.setPosition(currentX + deltaX, currentY + deltaY);
-    }
   }
 });
 
@@ -391,14 +328,12 @@ if (gotTheLock) {
     console.log('[Desktop Cat] App is ready');
 
     setAutoLaunch(true);
-    createAnchorWindow();
     createMainWindow();
     createTray();
     startNotificationServer();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createAnchorWindow();
         createMainWindow();
       }
     });
