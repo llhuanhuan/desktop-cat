@@ -51,7 +51,7 @@ async function loadTheme(state) {
 async function setThemeState(state) {
   const url = await loadTheme(state);
   if (url && svgWrapper) {
-    svgWrapper.innerHTML = `<img src="${url}" alt="${state}" style="width:100%;height:100%;object-fit:contain;">`;
+    svgWrapper.innerHTML = `<img src="${url}" alt="${state}" style="width:100%;height:100%;object-fit:contain;border:none;outline:none;">`;
   }
 }
 

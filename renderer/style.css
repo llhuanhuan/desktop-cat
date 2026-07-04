@@ -6,12 +6,17 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  border: none;
+  outline: none;
 }
 
-body {
+html, body {
   background: transparent;
-  overflow: visible;
+  overflow: hidden;
   user-select: none;
+  border: none;
+  outline: none;
+  -webkit-app-region: no-drag;
 }
 
 /* 容器 */
