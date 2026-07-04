@@ -1,12 +1,56 @@
 // ============================================
-// Desktop Cat - 图片猫咪交互控制器
+// Desktop Cat - SVG 猫咪交互控制器
 // ============================================
 
-let cat, bubble, bubbleText;
+let cat, bubble, bubbleText, svgWrapper;
 let isDragging = false;
 let dragStartX = 0, dragStartY = 0;
 let currentState = 'idle';
 let stateTimer = null;
+let svgCache = {};
+
+// SVG 文件映射（6 个状态）
+const SVG_MAP = {
+  idle: 'assets/clawd-idle.svg',
+  happy: 'assets/clawd-happy.svg',
+  sleeping: 'assets/clawd-sleeping.svg',
+  thinking: 'assets/clawd-working-thinking.svg',
+  working: 'assets/clawd-working-typing.svg',
+  error: 'assets/clawd-error.svg'
+};
+
+// 状态对应的气泡消息
+const STATE_MESSAGES = {
+  thinking: ['思考中...', '让我想想...', '嗯...'],
+  working: ['干活中...', '写代码中...', '马上就好...'],
+  error: ['出错了！', '遇到了问题...', '需要帮忙...'],
+  happy: ['搞定啦！✨', '任务完成！🎉', '做好了！💖']
+};
+
+// ============================================
+// SVG 加载器
+// ============================================
+async function loadSVG(state) {
+  if (svgCache[state]) return svgCache[state];
+
+  try {
+    const response = await fetch(SVG_MAP[state]);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const svgText = await response.text();
+    svgCache[state] = svgText;
+    return svgText;
+  } catch (e) {
+    console.error(`[Desktop Cat] Failed to load SVG: ${state}`, e);
+    return null;
+  }
+}
+
+async function setSVGState(state) {
+  const svgText = await loadSVG(state);
+  if (svgText && svgWrapper) {
+    svgWrapper.innerHTML = svgText;
+  }
+}
 
 // ============================================
 // 音效
@@ -38,6 +82,14 @@ const sound = {
         setTimeout(() => this._tone(659, 0.15, 0.2), 100);
         setTimeout(() => this._tone(784, 0.2, 0.25), 200);
         break;
+      case 'error':
+        this._tone(300, 0.2, 0.3);
+        setTimeout(() => this._tone(200, 0.3, 0.25), 200);
+        break;
+      case 'thinking':
+        this._tone(440, 0.1, 0.15);
+        setTimeout(() => this._tone(550, 0.1, 0.15), 150);
+        break;
     }
   },
 
@@ -62,7 +114,7 @@ const sound = {
 };
 
 // ============================================
-// 粒子
+// 粒子效果
 // ============================================
 const particles = {
   heart(x, y) {
@@ -100,9 +152,19 @@ const particles = {
 // ============================================
 function setState(state, duration) {
   if (stateTimer) clearTimeout(stateTimer);
-  cat.classList.remove(currentState);
+  const prevState = currentState;
   currentState = state;
-  cat.classList.add(state);
+
+  // 切换 SVG 动画
+  setSVGState(state);
+
+  // 状态变化音效
+  if (state !== prevState) {
+    if (state === 'thinking') sound.play('thinking');
+    else if (state === 'error') sound.play('error');
+    else if (state === 'happy') sound.play('happy');
+  }
+
   if (duration) {
     stateTimer = setTimeout(() => setState('idle'), duration);
   }
@@ -119,6 +181,21 @@ function showBubble(text, duration = 2000) {
 }
 
 // ============================================
+// 点击穿透控制
+// ============================================
+function enableClickThrough() {
+  if (window.electronAPI) {
+    window.electronAPI.setIgnoreMouse(true);
+  }
+}
+
+function disableClickThrough() {
+  if (window.electronAPI) {
+    window.electronAPI.setIgnoreMouse(false);
+  }
+}
+
+// ============================================
 // 拖拽
 // ============================================
 function initDrag() {
@@ -130,6 +207,7 @@ function initDrag() {
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     container.style.cursor = 'grabbing';
+    disableClickThrough(); // 拖拽时禁用穿透
     e.preventDefault();
   });
 
@@ -147,7 +225,11 @@ function initDrag() {
   document.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
-      document.getElementById('cat-container').style.cursor = 'grab';
+      container.style.cursor = 'grab';
+      // 拖拽结束后恢复穿透（鼠标不在猫咪上时）
+      if (!cat.matches(':hover')) {
+        enableClickThrough();
+      }
     }
   });
 }
@@ -156,7 +238,7 @@ function initDrag() {
 // 交互
 // ============================================
 function playTaskDone() {
-  setState('happy', 1800);
+  setState('happy', 3000);
   sound.play('happy');
 
   const rect = cat.getBoundingClientRect();
@@ -167,12 +249,13 @@ function playTaskDone() {
   particles.sparkle(cx, cy);
   setTimeout(() => particles.heart(cx, cy - 20), 300);
 
-  const msgs = ['任务完成！🎉', '搞定啦！✨', '做好了！💖'];
+  const msgs = STATE_MESSAGES.happy;
   showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
 function playClick() {
-  setState('click', 400);
+  cat.classList.add('click');
+  setTimeout(() => cat.classList.remove('click'), 400);
   sound.play('click');
 
   const rect = cat.getBoundingClientRect();
@@ -208,21 +291,59 @@ function toggleSleep() {
 // ============================================
 // 初始化
 // ============================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   cat = document.getElementById('cat');
   bubble = document.getElementById('bubble');
   bubbleText = bubble.querySelector('.bubble-text');
+  svgWrapper = document.getElementById('cat-svg-wrapper');
+
+  // 预加载所有 SVG
+  await Promise.all([
+    loadSVG('idle'),
+    loadSVG('happy'),
+    loadSVG('sleeping'),
+    loadSVG('thinking'),
+    loadSVG('working'),
+    loadSVG('error')
+  ]);
+
+  // 设置初始状态
+  await setSVGState('idle');
 
   initDrag();
 
+  // 监听 Claude Code 状态变化
   if (window.electronAPI) {
+    window.electronAPI.onStateChange((data) => {
+      const { state, event, detail } = data;
+      console.log(`[Desktop Cat] State: ${state} (event: ${event})`);
+
+      // 根据状态设置持续时间
+      let duration = null;
+      if (state === 'happy') duration = 3000;
+      else if (state === 'error') duration = 5000;
+
+      setState(state, duration);
+
+      // 显示状态气泡
+      const msgs = STATE_MESSAGES[state];
+      if (msgs) {
+        const msg = msgs[Math.floor(Math.random() * msgs.length)];
+        const detailText = detail ? ` (${detail})` : '';
+        showBubble(msg + detailText, 2000);
+      }
+    });
+
+    // 兼容旧接口
     window.electronAPI.onTaskDone(() => playTaskDone());
   }
 
+  // 点击事件
   cat.addEventListener('click', () => {
     if (!isDragging) playClick();
   });
 
+  // 双击切换睡眠
   cat.addEventListener('dblclick', (e) => {
     if (!isDragging) {
       e.preventDefault();
@@ -230,19 +351,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // 悬停：禁用穿透 + 显示气泡
   cat.addEventListener('mouseenter', () => {
+    disableClickThrough();
     if (!isDragging && currentState !== 'sleeping') playHover();
   });
 
-  cat.addEventListener('mouseleave', stopHover);
+  // 离开：恢复穿透
+  cat.addEventListener('mouseleave', () => {
+    stopHover();
+    if (!isDragging) {
+      enableClickThrough();
+    }
+  });
 
+  // 右键切换音效
   cat.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     const enabled = sound.toggle();
     showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
 
-  // 随机动作
+  // 随机动作（空闲时）
   setInterval(() => {
     if (currentState === 'idle' && Math.random() < 0.25) {
       const rect = cat.getBoundingClientRect();
@@ -256,5 +386,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 15000);
 
-  console.log('[Desktop Cat] Initialized with image');
+  console.log('[Desktop Cat] Initialized with 6 SVG states + click-through');
 });

@@ -1,53 +1,49 @@
 // Electron 主进程
 console.log('[Desktop Cat] Starting...');
 
-// 在 Electron 主进程中，require('electron') 应该返回 API 对象
-// 但根据版本不同，可能需要不同的处理方式
-
-let app, BrowserWindow, Tray, Menu, ipcMain, nativeImage;
-
-// 尝试方式1: 直接 require('electron')
-const electron = require('electron');
-console.log('[Desktop Cat] require("electron"):', typeof electron);
-
-if (typeof electron === 'object' && electron.app) {
-  // 标准方式
-  ({ app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = electron);
-  console.log('[Desktop Cat] Loaded via require("electron")');
-} else if (typeof electron === 'string') {
-  // 返回的是路径，说明不是在 Electron 主进程中
-  console.log('[Desktop Cat] require("electron") returned path, not in main process');
-  console.log('[Desktop Cat] This usually means ELECTRON_RUN_AS_NODE is set');
-  console.log('[Desktop Cat] process.env.ELECTRON_RUN_AS_NODE:', process.env.ELECTRON_RUN_AS_NODE);
-
-  // 尝试方式2: 从 electron/dist 获取
-  try {
-    const distPath = require('electron/dist/electron');
-    console.log('[Desktop Cat] require("electron/dist/electron"):', typeof distPath);
-  } catch (e) {
-    console.log('[Desktop Cat] require("electron/dist/electron") failed');
-  }
-
-  // 尝试方式3: 使用 process.mainModule
-  if (process.mainModule) {
-    console.log('[Desktop Cat] process.mainModule:', process.mainModule.filename);
-  }
-}
-
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 let tray;
 const PORT = 18923;
 
-function createWindow() {
-  if (!BrowserWindow) {
-    console.error('[Desktop Cat] BrowserWindow not available');
-    return;
-  }
+// ============================================
+// 位置记忆
+// ============================================
+const CONFIG_DIR = path.join(os.homedir(), '.desktop-cat');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-  mainWindow = new BrowserWindow({
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    }
+  } catch {}
+  return {};
+}
+
+function saveConfig(updates) {
+  const config = { ...loadConfig(), ...updates };
+  try {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Desktop Cat] Failed to save config:', e.message);
+  }
+}
+
+// ============================================
+// 窗口创建
+// ============================================
+function createWindow() {
+  const config = loadConfig();
+  const windowOptions = {
     width: 300,
     height: 300,
     transparent: true,
@@ -60,26 +56,40 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     }
-  });
+  };
 
+  // 恢复上次位置
+  if (config.x !== undefined && config.y !== undefined) {
+    windowOptions.x = config.x;
+    windowOptions.y = config.y;
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
-  mainWindow.setIgnoreMouseEvents(false);
+
+  // 默认开启点击穿透（透明区域穿透到下面窗口）
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // 保存位置：移动结束时
+  mainWindow.on('move', () => {
+    if (mainWindow) {
+      const [x, y] = mainWindow.getPosition();
+      saveConfig({ x, y });
+    }
+  });
 }
 
+// ============================================
+// 系统托盘
+// ============================================
 function createTray() {
-  if (!Tray || !nativeImage) {
-    console.error('[Desktop Cat] Tray or nativeImage not available');
-    return;
-  }
-
   const icon = nativeImage.createEmpty();
   tray = new Tray(icon);
 
-  // 获取当前自启动状态
   const loginSettings = app.getLoginItemSettings();
   const isAutoLaunchEnabled = loginSettings.openAtLogin;
 
@@ -97,7 +107,7 @@ function createTray() {
     {
       label: '测试通知',
       click: () => {
-        notifyTaskDone('测试任务已完成！');
+        notifyStateChange('happy', 'test', '测试任务已完成！');
       }
     },
     { type: 'separator' },
@@ -130,24 +140,57 @@ function createTray() {
   });
 }
 
-function notifyTaskDone(message) {
-  // 发送应用内通知
+// ============================================
+// 状态通知
+// ============================================
+function notifyStateChange(state, event, detail) {
   if (mainWindow) {
-    mainWindow.webContents.send('task-done', message);
+    mainWindow.webContents.send('state-change', { state, event, detail });
   }
 }
 
+// ============================================
+// HTTP 服务器
+// ============================================
 function startNotificationServer() {
   const server = http.createServer((req, res) => {
-    if (req.method === 'POST') {
+    // CORS 头
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/state') {
+      // 状态更新接口
       let body = '';
-      req.on('data', chunk => {
-        body += chunk.toString();
-      });
+      req.on('data', chunk => { body += chunk.toString(); });
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          notifyTaskDone(data.message || '任务已完成！');
+          const { state, event, detail } = data;
+          if (state) {
+            notifyStateChange(state, event, detail);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+    } else if (req.method === 'POST') {
+      // 兼容旧的通知接口
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          notifyStateChange('happy', 'notification', data.message || '任务已完成！');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
         } catch (e) {
@@ -174,69 +217,65 @@ function startNotificationServer() {
   });
 }
 
-// 检查 API是否可用
-if (!app) {
-  console.error('[Desktop Cat] Error: Electron API not available');
-  console.error('[Desktop Cat] This script must be run with Electron');
-  console.error('[Desktop Cat] Try: npm start');
-  process.exit(1);
+// ============================================
+// 自启动设置
+// ============================================
+function setAutoLaunch(enable) {
+  const execPath = process.execPath;
+  const appPath = app.getAppPath();
+
+  app.setLoginItemSettings({
+    openAtLogin: enable,
+    path: execPath,
+    args: [appPath]
+  });
+
+  console.log(`[Desktop Cat] Auto-launch ${enable ? 'enabled' : 'disabled'}`);
 }
 
-// 单实例锁 - 确保只运行一个实例
+// ============================================
+// 单实例锁
+// ============================================
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   console.log('[Desktop Cat] Another instance is already running, quitting...');
   app.quit();
 } else {
-  // 第二个实例启动时，聚焦到第一个实例的窗口
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', () => {
     if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
+      if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
     }
   });
 }
 
-// 设置开机自启动
-function setAutoLaunch(enable) {
-  if (app) {
-    // 获取应用根目录
-    const appPath = app.getAppPath();
-    const execPath = process.execPath;
-
-    console.log(`[Desktop Cat] Setting auto-launch: ${enable}`);
-    console.log(`[Desktop Cat] Exec path: ${execPath}`);
-    console.log(`[Desktop Cat] App path: ${appPath}`);
-
-    app.setLoginItemSettings({
-      openAtLogin: enable,
-      path: execPath,
-      args: [appPath]
-    });
-
-    console.log(`[Desktop Cat] Auto-launch ${enable ? 'enabled' : 'disabled'}`);
+// ============================================
+// IPC 通信
+// ============================================
+ipcMain.on('move-window', (event, deltaX, deltaY) => {
+  if (mainWindow) {
+    const [currentX, currentY] = mainWindow.getPosition();
+    mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
   }
-}
+});
 
+// 点击穿透控制
+ipcMain.on('set-ignore-mouse', (event, ignore) => {
+  if (mainWindow) {
+    mainWindow.setIgnoreMouseEvents(ignore, { forward: true });
+  }
+});
+
+// ============================================
+// 应用启动
+// ============================================
 if (gotTheLock) {
   app.whenReady().then(() => {
     console.log('[Desktop Cat] App is ready');
 
-    // 启用开机自启动
     setAutoLaunch(true);
-
-    // 处理窗口移动
-    ipcMain.on('move-window', (event, deltaX, deltaY) => {
-      if (mainWindow) {
-        const [currentX, currentY] = mainWindow.getPosition();
-        mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
-      }
-    });
-
     createWindow();
     createTray();
     startNotificationServer();
