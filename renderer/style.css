@@ -16,7 +16,10 @@ body {
 
 /* 容器 */
 #cat-container {
-  position: relative;
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 150px;
   height: 150px;
   cursor: grab;
@@ -111,7 +114,7 @@ body {
 .bubble.show {
   opacity: 1;
   transform: translateX(-50%) scale(1);
-  top: -25px;
+  top: -10px;
 }
 
 /* ============================================

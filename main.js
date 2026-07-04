@@ -87,7 +87,9 @@ function createWindow() {
 // 系统托盘
 // ============================================
 function createTray() {
-  const icon = nativeImage.createEmpty();
+  // 加载猫咪图标
+  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
 
   const loginSettings = app.getLoginItemSettings();
