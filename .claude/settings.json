@@ -6,6 +6,13 @@
                 "e:/AI/desktop-cat/hooks/clawd-hook.js",
                 "Stop"
             ]
+        },
+        "afterToolUse": {
+            "command": "node",
+            "args": [
+                "e:/AI/desktop-cat/hooks/clawd-hook.js",
+                "PostToolUse"
+            ]
         }
     }
 }
