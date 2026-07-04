@@ -87,8 +87,8 @@ function createWindow() {
 // 系统托盘
 // ============================================
 function createTray() {
-  // 加载猫咪图标
-  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon.png');
+  // 加载猫咪图标 (32x32)
+  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-flash.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
 
