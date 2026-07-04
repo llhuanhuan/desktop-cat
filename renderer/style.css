@@ -1,3 +1,8 @@
+/* ============================================
+   Desktop Cat - 完整猫咪样式
+   ============================================ */
+
+/* 基础重置 */
 * {
   margin: 0;
   padding: 0;
@@ -8,12 +13,16 @@ body {
   background: transparent;
   overflow: hidden;
   user-select: none;
+  -webkit-app-region: no-drag;
 }
 
+/* ============================================
+   容器
+   ============================================ */
 #cat-container {
   position: relative;
-  width: 200px;
-  height: 250px;
+  width: 180px;
+  height: 220px;
   cursor: grab;
 }
 
@@ -21,55 +30,74 @@ body {
   cursor: grabbing;
 }
 
-/* ========== 猫咪基础样式 ========== */
+/* ============================================
+   猫咪主体
+   ============================================ */
 .cat {
   position: absolute;
-  bottom: 20px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  transition: all 0.3s ease;
+  width: 120px;
+  height: 160px;
 }
 
-/* ========== 头部 ========== */
-.cat-head {
-  position: relative;
-  width: 90px;
-  height: 80px;
-  background: #FF9F43;
-  border-radius: 50% 50% 45% 45%;
-  margin: 0 auto;
+/* ============================================
+   头部
+   ============================================ */
+.head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 75px;
+  background: #FFB74D;
+  border-radius: 50% 50% 48% 48%;
   z-index: 3;
+  box-shadow: inset 0 -5px 10px rgba(0,0,0,0.05);
 }
 
 /* 耳朵 */
 .ear {
   position: absolute;
-  width: 30px;
-  height: 35px;
-  background: #FF9F43;
-  top: -12px;
-  border-radius: 50% 50% 0 0;
+  width: 28px;
+  height: 32px;
+  background: #FFB74D;
+  top: -8px;
+  z-index: 2;
 }
 
 .ear.left {
-  left: 8px;
+  left: 6px;
+  border-radius: 50% 50% 20% 50%;
   transform: rotate(-15deg);
 }
 
 .ear.right {
-  right: 8px;
+  right: 6px;
+  border-radius: 50% 50% 50% 20%;
   transform: rotate(15deg);
 }
 
 .ear-inner {
   position: absolute;
-  width: 18px;
-  height: 22px;
-  background: #FFB973;
+  width: 16px;
+  height: 20px;
+  background: #FFD54F;
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  border-radius: 50% 50% 0 0;
+}
+
+.ear.left .ear-inner {
+  border-radius: 50% 50% 20% 50%;
+  transform: translateX(-50%) rotate(5deg);
+}
+
+.ear.right .ear-inner {
+  border-radius: 50% 50% 50% 20%;
+  transform: translateX(-50%) rotate(-5deg);
 }
 
 /* 脸部 */
@@ -82,20 +110,28 @@ body {
 /* 眼睛 */
 .eye {
   position: absolute;
-  width: 16px;
-  height: 18px;
-  background: white;
-  border-radius: 50%;
-  top: 28px;
-  overflow: hidden;
+  width: 22px;
+  height: 24px;
+  top: 22px;
+  z-index: 1;
 }
 
 .eye.left {
-  left: 18px;
+  left: 14px;
 }
 
 .eye.right {
-  right: 18px;
+  right: 14px;
+}
+
+.iris {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: white;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #333;
 }
 
 .pupil {
@@ -104,20 +140,36 @@ body {
   height: 14px;
   background: #2C3E50;
   border-radius: 50%;
-  bottom: 2px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
+  transition: all 0.2s ease;
 }
 
+/* 眼睛高光 */
 .shine {
   position: absolute;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   background: white;
   border-radius: 50%;
-  top: 4px;
-  right: 3px;
-  z-index: 1;
+  top: 6px;
+  right: 5px;
+  z-index: 2;
+  box-shadow: 0 0 2px rgba(255,255,255,0.8);
+}
+
+/* 眼皮 */
+.eyelid {
+  position: absolute;
+  width: 100%;
+  height: 0%;
+  background: #FFB74D;
+  top: 0;
+  left: 0;
+  border-radius: 50% 50% 0 0;
+  z-index: 3;
+  transition: height 0.1s ease;
 }
 
 /* 鼻子 */
@@ -125,19 +177,20 @@ body {
   position: absolute;
   width: 10px;
   height: 8px;
-  background: #E17055;
-  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
-  top: 45px;
+  background: #F48FB1;
+  top: 42px;
   left: 50%;
   transform: translateX(-50%);
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+  box-shadow: inset 0 2px 3px rgba(0,0,0,0.1);
 }
 
 /* 嘴巴 */
 .mouth {
   position: absolute;
-  width: 24px;
-  height: 12px;
-  top: 52px;
+  width: 20px;
+  height: 10px;
+  top: 49px;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -146,9 +199,9 @@ body {
 .mouth::after {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 8px;
-  border-bottom: 2px solid #2C3E50;
+  width: 10px;
+  height: 7px;
+  border-bottom: 2.5px solid #795548;
   border-radius: 0 0 50% 50%;
   top: 0;
 }
@@ -161,63 +214,125 @@ body {
   right: 0;
 }
 
+/* 舌头 */
+.tongue {
+  position: absolute;
+  width: 8px;
+  height: 0;
+  background: #F48FB1;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 0 0 50% 50%;
+  transition: height 0.3s ease;
+  overflow: hidden;
+}
+
+/* 腮红 */
+.blush {
+  position: absolute;
+  width: 14px;
+  height: 8px;
+  background: rgba(255, 138, 128, 0.4);
+  border-radius: 50%;
+  top: 40px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.blush.left {
+  left: 5px;
+}
+
+.blush.right {
+  right: 5px;
+}
+
 /* 胡须 */
+.whiskers {
+  position: absolute;
+  top: 40px;
+  width: 35px;
+  height: 20px;
+}
+
+.whiskers.left {
+  left: -25px;
+}
+
+.whiskers.right {
+  right: -25px;
+}
+
 .whisker {
   position: absolute;
-  width: 30px;
+  width: 100%;
   height: 2px;
-  background: #2C3E50;
+  background: #795548;
   border-radius: 1px;
   opacity: 0.6;
+  transform-origin: right center;
 }
 
-.whisker.left-top {
-  top: 42px;
-  left: -15px;
-  transform: rotate(-5deg);
+.whiskers.right .whisker {
+  transform-origin: left center;
 }
 
-.whisker.left-bottom {
-  top: 48px;
-  left: -12px;
-  transform: rotate(5deg);
+.whisker.w1 {
+  top: 2px;
+  transform: rotate(-8deg);
 }
 
-.whisker.right-top {
-  top: 42px;
-  right: -15px;
-  transform: rotate(5deg);
+.whisker.w2 {
+  top: 8px;
+  transform: rotate(0deg);
 }
 
-.whisker.right-bottom {
-  top: 48px;
-  right: -12px;
-  transform: rotate(-5deg);
+.whisker.w3 {
+  top: 14px;
+  transform: rotate(8deg);
 }
 
-/* ========== 身体 ========== */
-.cat-body {
-  position: relative;
-  width: 100px;
-  height: 80px;
-  margin: -5px auto 0;
+.whiskers.right .whisker.w1 {
+  transform: rotate(8deg);
+}
+
+.whiskers.right .whisker.w2 {
+  transform: rotate(0deg);
+}
+
+.whiskers.right .whisker.w3 {
+  transform: rotate(-8deg);
+}
+
+/* ============================================
+   身体
+   ============================================ */
+.body {
+  position: absolute;
+  top: 55px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 70px;
   z-index: 2;
 }
 
-.body-main {
+.body-shape {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: #FF9F43;
+  background: #FFB74D;
   border-radius: 50% 50% 45% 45%;
+  box-shadow: inset 0 -5px 10px rgba(0,0,0,0.05);
 }
 
-/* 肚子装饰 */
+/* 肚子 */
 .belly {
   position: absolute;
-  width: 60px;
-  height: 50px;
-  background: #FFB973;
+  width: 55px;
+  height: 45px;
+  background: #FFE0B2;
   border-radius: 50%;
   bottom: 5px;
   left: 50%;
@@ -225,175 +340,405 @@ body {
   z-index: 1;
 }
 
-/* ========== 腿 ========== */
-.leg {
+/* 花纹 */
+.stripe {
+  position: absolute;
+  width: 12px;
+  height: 4px;
+  background: #FF9800;
+  border-radius: 2px;
+  z-index: 1;
+  opacity: 0.6;
+}
+
+.stripe.s1 {
+  top: 10px;
+  left: 15px;
+  transform: rotate(-10deg);
+}
+
+.stripe.s2 {
+  top: 15px;
+  left: 20px;
+  transform: rotate(5deg);
+}
+
+.stripe.s3 {
+  top: 20px;
+  left: 12px;
+  transform: rotate(-5deg);
+}
+
+/* ============================================
+   腿/爪子
+   ============================================ */
+.paw {
   position: absolute;
   width: 22px;
-  height: 30px;
-  background: #FF9F43;
-  border-radius: 0 0 8px 8px;
+  height: 25px;
+  background: #FFB74D;
   z-index: 1;
 }
 
-/* 脚掌 */
-.leg::after {
+.paw.front {
+  top: 105px;
+  border-radius: 30% 30% 50% 50%;
+}
+
+.paw.back {
+  top: 110px;
+  border-radius: 30% 30% 50% 50%;
+}
+
+.paw.front.left {
+  left: 18px;
+}
+
+.paw.front.right {
+  right: 18px;
+}
+
+.paw.back.left {
+  left: 25px;
+}
+
+.paw.back.right {
+  right: 25px;
+}
+
+/* 脚掌肉垫 */
+.paw-pad {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 8px;
+  background: #FFE0B2;
+  border-radius: 50%;
+}
+
+/* ============================================
+   尾巴
+   ============================================ */
+.tail {
+  position: absolute;
+  bottom: 40px;
+  right: -15px;
+  width: 60px;
+  height: 50px;
+  z-index: 0;
+  transform-origin: left bottom;
+}
+
+.tail-curve {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 8px solid #FFB74D;
+  border-color: #FFB74D transparent transparent transparent;
+  border-radius: 50% 50% 0 0;
+  transform: rotate(-30deg);
+}
+
+/* ============================================
+   项圈和铃铛
+   ============================================ */
+.collar {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 10px;
+  background: #E53935;
+  border-radius: 5px;
+  z-index: 4;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.bell {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #FFD700;
+  border-radius: 50%;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.bell::after {
   content: '';
   position: absolute;
-  width: 26px;
-  height: 10px;
-  background: #FF9F43;
+  width: 4px;
+  height: 4px;
+  background: #333;
   border-radius: 50%;
-  bottom: -2px;
-  left: -2px;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-/* 前腿 */
-.leg.front-left {
-  bottom: -25px;
-  left: 12px;
-}
-
-.leg.front-right {
-  bottom: -25px;
-  left: 40px;
-}
-
-/* 后腿 */
-.leg.back-left {
-  bottom: -25px;
-  right: 40px;
-}
-
-.leg.back-right {
-  bottom: -25px;
-  right: 12px;
-}
-
-/* ========== 尾巴 ========== */
-.cat-tail {
+/* ============================================
+   气泡
+   ============================================ */
+.bubble {
   position: absolute;
-  width: 70px;
-  height: 25px;
-  background: #FF9F43;
-  border-radius: 20px 20px 0 0;
-  bottom: 50px;
-  right: -30px;
-  transform-origin: left bottom;
-  transform: rotate(-20deg);
-  animation: tailWag 2s ease-in-out infinite;
-  z-index: 1;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 8px 14px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-family: 'Microsoft YaHei', sans-serif;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  z-index: 20;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-@keyframes tailWag {
-  0%, 100% { transform: rotate(-20deg); }
-  50% { transform: rotate(10deg); }
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
 }
 
-/* ========== 动画状态 ========== */
+.bubble.show {
+  opacity: 1;
+  top: -40px;
+}
 
-/* 空闲状态 - 轻微弹跳 */
+.bubble.hidden {
+  opacity: 0;
+  top: -30px;
+}
+
+/* ============================================
+   通知
+   ============================================ */
+.notification {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: 'Microsoft YaHei', sans-serif;
+  white-space: nowrap;
+  z-index: 20;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.notification.success {
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+}
+
+.notification.info {
+  background: rgba(33, 150, 243, 0.9);
+  color: white;
+}
+
+.notification.warning {
+  background: rgba(255, 152, 0, 0.9);
+  color: white;
+}
+
+.notification.show {
+  opacity: 1;
+  top: -60px;
+}
+
+.notification.hidden {
+  opacity: 0;
+  top: -50px;
+}
+
+/* ============================================
+   动画状态 - 空闲
+   ============================================ */
 .cat.idle {
   animation: idleBounce 3s ease-in-out infinite;
 }
 
 @keyframes idleBounce {
   0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-8px); }
+  50% { transform: translateX(-50%) translateY(-5px); }
 }
 
-/* 空闲时腿的轻微移动 */
-.cat.idle .leg.front-left,
-.cat.idle .leg.back-right {
-  animation: legMove 3s ease-in-out infinite;
+/* 空闲时尾巴摆动 */
+.cat.idle .tail {
+  animation: tailWag 2s ease-in-out infinite;
 }
 
-.cat.idle .leg.front-right,
-.cat.idle .leg.back-left {
-  animation: legMove 3s ease-in-out infinite 0.5s;
+@keyframes tailWag {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(15deg); }
 }
 
-@keyframes legMove {
-  0%, 100% { height: 30px; }
-  50% { height: 28px; }
-}
-
-/* 眨眼动画 */
-.cat.idle .pupil {
+/* 空闲时眨眼 */
+.cat.idle .eyelid {
   animation: blink 4s ease-in-out infinite;
 }
 
 @keyframes blink {
-  0%, 95%, 100% { height: 14px; }
-  97% { height: 2px; }
+  0%, 95%, 100% { height: 0%; }
+  97% { height: 100%; }
 }
 
-/* 开心状态 */
+/* 空闲时腿部微动 */
+.cat.idle .paw.front.left,
+.cat.idle .paw.back.right {
+  animation: pawMove 3s ease-in-out infinite;
+}
+
+.cat.idle .paw.front.right,
+.cat.idle .paw.back.left {
+  animation: pawMove 3s ease-in-out infinite 0.5s;
+}
+
+@keyframes pawMove {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* ============================================
+   动画状态 - 开心
+   ============================================ */
 .cat.happy {
   animation: happyJump 0.6s ease-out;
 }
 
 @keyframes happyJump {
   0% { transform: translateX(-50%) translateY(0) scale(1); }
-  30% { transform: translateX(-50%) translateY(-40px) scale(1.1); }
-  50% { transform: translateX(-50%) translateY(-45px) scale(1.15); }
+  30% { transform: translateX(-50%) translateY(-30px) scale(1.1); }
+  50% { transform: translateX(-50%) translateY(-35px) scale(1.12); }
   100% { transform: translateX(-50%) translateY(0) scale(1); }
 }
 
-.cat.happy .eye {
+/* 开心时眯眼 */
+.cat.happy .eyelid {
   animation: happyEyes 0.6s ease-out;
 }
 
 @keyframes happyEyes {
-  0% { height: 18px; }
-  30% { height: 5px; }
-  100% { height: 8px; }
+  0% { height: 0%; }
+  30% { height: 60%; }
+  100% { height: 50%; }
 }
 
-.cat.happy .mouth {
-  animation: happyMouth 0.6s ease-out;
-}
-
+/* 开心时张嘴笑 */
 .cat.happy .mouth::before,
 .cat.happy .mouth::after {
   animation: happySmile 0.6s ease-out;
 }
 
 @keyframes happySmile {
-  0% { height: 8px; }
-  30% { height: 14px; }
-  100% { height: 12px; }
+  0% { height: 7px; }
+  30% { height: 10px; }
+  100% { height: 9px; }
 }
 
+/* 开心时伸舌头 */
+.cat.happy .tongue {
+  animation: showTongue 0.6s ease-out;
+}
+
+@keyframes showTongue {
+  0% { height: 0; }
+  30% { height: 0; }
+  50% { height: 6px; }
+  100% { height: 4px; }
+}
+
+/* 开心时腮红 */
+.cat.happy .blush {
+  animation: showBlush 0.6s ease-out;
+}
+
+@keyframes showBlush {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+/* 开心时尾巴快速摆动 */
 .cat.happy .tail {
-  animation: happyTail 0.3s ease-in-out 3;
+  animation: happyTail 0.2s ease-in-out 5;
 }
 
 @keyframes happyTail {
-  0%, 100% { transform: rotate(-20deg); }
-  50% { transform: rotate(30deg); }
+  0%, 100% { transform: rotate(-15deg); }
+  50% { transform: rotate(25deg); }
 }
 
-/* 点击动画 */
+/* 开心时铃铛摇晃 */
+.cat.happy .bell {
+  animation: bellRing 0.15s ease-in-out 6;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(10deg); }
+  75% { transform: translateX(-50%) rotate(-10deg); }
+}
+
+/* ============================================
+   动画状态 - 点击
+   ============================================ */
 .cat.click {
   animation: clickBounce 0.4s ease-out;
 }
 
 @keyframes clickBounce {
   0% { transform: translateX(-50%) scale(1); }
-  30% { transform: translateX(-50%) scale(0.85); }
-  60% { transform: translateX(-50%) scale(1.05); }
+  20% { transform: translateX(-50%) scale(0.9); }
+  40% { transform: translateX(-50%) scale(1.05); }
   100% { transform: translateX(-50%) scale(1); }
 }
 
-/* 悬停动画 */
-.cat.hover {
-  animation: hoverWiggle 0.6s ease-in-out;
+/* 点击时头部倾斜 */
+.cat.click .head {
+  animation: headTilt 0.4s ease-out;
 }
 
-@keyframes hoverWiggle {
-  0%, 100% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-50%) rotate(-5deg); }
-  75% { transform: translateX(-50%) rotate(5deg); }
+@keyframes headTilt {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  30% { transform: translateX(-50%) rotate(-10deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+/* ============================================
+   动画状态 - 悬停
+   ============================================ */
+.cat.hover .blush {
+  opacity: 0.5;
+}
+
+.cat.hover .whisker {
+  animation: whiskerWiggle 0.5s ease-in-out infinite;
+}
+
+@keyframes whiskerWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(5deg); }
 }
 
 .cat.hover .tail {
@@ -401,57 +746,53 @@ body {
 }
 
 @keyframes tailWagFast {
-  0%, 100% { transform: rotate(-25deg); }
+  0%, 100% { transform: rotate(-15deg); }
   50% { transform: rotate(20deg); }
 }
 
-/* ========== 通知样式 ========== */
-.notification {
+/* ============================================
+   动画状态 - 睡眠
+   ============================================ */
+.cat.sleeping .eyelid {
+  height: 70%;
+}
+
+.cat.sleeping .pupil {
+  display: none;
+}
+
+.cat.sleeping {
+  animation: sleepBreathe 3s ease-in-out infinite;
+}
+
+@keyframes sleepBreathe {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.03); }
+}
+
+/* 睡眠时显示 Zzz */
+.cat.sleeping::after {
+  content: '💤';
   position: absolute;
-  bottom: 180px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-family: 'Microsoft YaHei', sans-serif;
-  white-space: nowrap;
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  z-index: 10;
+  top: -20px;
+  right: -10px;
+  font-size: 16px;
+  animation: sleepZzz 2s ease-in-out infinite;
 }
 
-.notification.success {
-  background: rgba(46, 204, 113, 0.9);
-  color: white;
+@keyframes sleepZzz {
+  0% { opacity: 0; transform: translateY(0) scale(0.8); }
+  50% { opacity: 1; transform: translateY(-15px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.8); }
 }
 
-.notification.info {
-  background: rgba(52, 152, 219, 0.9);
-  color: white;
-}
-
-.notification.warning {
-  background: rgba(241, 196, 15, 0.9);
-  color: white;
-}
-
-.notification.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-10px);
-}
-
-.notification.hidden {
-  opacity: 0;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ========== 粒子效果 ========== */
+/* ============================================
+   粒子效果
+   ============================================ */
 .particle {
   position: absolute;
   pointer-events: none;
-  z-index: 20;
+  z-index: 30;
   font-size: 16px;
 }
 
@@ -508,20 +849,17 @@ body {
   }
 }
 
-/* ========== 睡眠状态（可选） ========== */
-.cat.sleeping .eye {
-  height: 3px;
+.particle.confetti {
+  animation: confettiFall 1.5s ease-out forwards;
 }
 
-.cat.sleeping .pupil {
-  display: none;
-}
-
-.cat.sleeping {
-  animation: sleepBreathe 2s ease-in-out infinite;
-}
-
-@keyframes sleepBreathe {
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.02); }
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(80px) rotate(720deg);
+  }
 }

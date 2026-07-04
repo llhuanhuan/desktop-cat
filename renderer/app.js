@@ -1,25 +1,30 @@
-// 猫咪状态管理
-let cat, notification, notificationText;
-let catBody, catHead, catTail;
+// ============================================
+// Desktop Cat - 交互控制器
+// ============================================
 
+// 状态管理
+let cat, catHead, catTail, catBody;
+let bubble, bubbleText, notification, notificationText;
 let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
+let currentState = 'idle';
+let stateTimeout = null;
 
+// ============================================
 // 音效管理器
+// ============================================
 const soundManager = {
   sounds: {},
   enabled: true,
-  useGeneratedSounds: true, // 使用生成的音效作为备选
+  useGeneratedSounds: true,
 
-  // 预加载音效
   preload(name, path) {
     try {
       const audio = new Audio(path);
       audio.preload = 'auto';
       audio.volume = 0.5;
 
-      // 检查是否能加载
       audio.addEventListener('canplaythrough', () => {
         this.sounds[name] = audio;
         this.useGeneratedSounds = false;
@@ -27,7 +32,7 @@ const soundManager = {
       });
 
       audio.addEventListener('error', () => {
-        console.log(`[Sound] External sound not found: ${name}, using generated sounds`);
+        console.log(`[Sound] Using generated sound: ${name}`);
       });
 
       audio.load();
@@ -36,100 +41,123 @@ const soundManager = {
     }
   },
 
-  // 播放音效
   play(name) {
     if (!this.enabled) return;
 
-    // 优先使用外部音效文件
     if (this.sounds[name]) {
       try {
         const audio = this.sounds[name].cloneNode();
         audio.currentTime = 0;
-        audio.play().catch(e => console.log('[Sound] Play failed:', e));
+        audio.play().catch(() => {});
         return;
-      } catch (e) {
-        console.warn('[Sound] External play error:', e);
-      }
+      } catch (e) {}
     }
 
-    // 使用生成的音效
     if (this.useGeneratedSounds && window.soundGenerator) {
       switch (name) {
-        case 'meow':
-          window.soundGenerator.generateMeow();
-          break;
-        case 'click':
-          window.soundGenerator.generateClick();
-          break;
-        case 'success':
-          window.soundGenerator.generateSuccess();
-          break;
+        case 'meow': window.soundGenerator.generateMeow(); break;
+        case 'click': window.soundGenerator.generateClick(); break;
+        case 'success': window.soundGenerator.generateSuccess(); break;
       }
     }
   },
 
-  // 切换音效开关
   toggle() {
     this.enabled = !this.enabled;
     return this.enabled;
   }
 };
 
-// 粒子效果系统
+// ============================================
+// 粒子系统
+// ============================================
 const particleSystem = {
-  particles: [],
-
-  // 创建爱心粒子
   createHeart(x, y) {
-    const particle = document.createElement('div');
-    particle.className = 'particle heart';
-    particle.innerHTML = '❤️';
-    particle.style.left = `${x}px`;
-    particle.style.top = `${y}px`;
-    document.getElementById('cat-container').appendChild(particle);
-
-    // 动画结束后移除
-    setTimeout(() => particle.remove(), 1000);
+    const emojis = ['❤️', '💕', '💖', '💗'];
+    this._createParticle(x, y, emojis[Math.floor(Math.random() * emojis.length)], 'heart');
   },
 
-  // 创建星星粒子
   createStar(x, y) {
+    this._createParticle(x, y, '⭐', 'star');
+  },
+
+  createFirework(x, y) {
+    const emojis = ['✨', '🌟', '💫', '🎉', '🎊'];
+    for (let i = 0; i < 8; i++) {
+      setTimeout(() => {
+        const offsetX = (Math.random() - 0.5) * 80;
+        const offsetY = (Math.random() - 0.5) * 40;
+        this._createParticle(
+          x + offsetX,
+          y + offsetY,
+          emojis[Math.floor(Math.random() * emojis.length)],
+          'firework'
+        );
+      }, i * 60);
+    }
+  },
+
+  createConfetti(x, y) {
+    const colors = ['🎉', '🎊', '🎀', '🎈', '💐'];
+    for (let i = 0; i < 10; i++) {
+      setTimeout(() => {
+        const offsetX = (Math.random() - 0.5) * 100;
+        this._createParticle(
+          x + offsetX,
+          y - 20,
+          colors[Math.floor(Math.random() * colors.length)],
+          'confetti'
+        );
+      }, i * 80);
+    }
+  },
+
+  _createParticle(x, y, content, className) {
     const particle = document.createElement('div');
-    particle.className = 'particle star';
-    particle.innerHTML = '⭐';
+    particle.className = `particle ${className}`;
+    particle.textContent = content;
     particle.style.left = `${x}px`;
     particle.style.top = `${y}px`;
     document.getElementById('cat-container').appendChild(particle);
 
-    setTimeout(() => particle.remove(), 800);
-  },
-
-  // 创建烟花效果
-  createFirework(x, y) {
-    const emojis = ['✨', '🌟', '💫', '🎉'];
-    for (let i = 0; i < 6; i++) {
-      setTimeout(() => {
-        const particle = document.createElement('div');
-        particle.className = 'particle firework';
-        particle.innerHTML = emojis[Math.floor(Math.random() * emojis.length)];
-        particle.style.left = `${x + (Math.random() - 0.5) * 60}px`;
-        particle.style.top = `${y + (Math.random() - 0.5) * 60}px`;
-        document.getElementById('cat-container').appendChild(particle);
-        setTimeout(() => particle.remove(), 1000);
-      }, i * 50);
-    }
+    const duration = className === 'confetti' ? 1500 : 1000;
+    setTimeout(() => particle.remove(), duration);
   }
 };
 
-// 初始化拖拽功能
+// ============================================
+// 状态管理
+// ============================================
+function setState(newState, duration = null) {
+  if (stateTimeout) {
+    clearTimeout(stateTimeout);
+    stateTimeout = null;
+  }
+
+  cat.classList.remove(currentState);
+  currentState = newState;
+  cat.classList.add(newState);
+
+  if (duration) {
+    stateTimeout = setTimeout(() => {
+      setState('idle');
+    }, duration);
+  }
+}
+
+// ============================================
+// 拖拽功能
+// ============================================
 function initDrag() {
   const container = document.getElementById('cat-container');
 
   container.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
     isDragging = true;
     dragOffsetX = e.clientX;
     dragOffsetY = e.clientY;
     container.style.cursor = 'grabbing';
+    e.preventDefault();
   });
 
   document.addEventListener('mousemove', (e) => {
@@ -138,7 +166,6 @@ function initDrag() {
     const dx = e.clientX - dragOffsetX;
     const dy = e.clientY - dragOffsetY;
 
-    // 通过 IPC 移动窗口
     if (window.electronAPI) {
       window.electronAPI.moveWindow(dx, dy);
     }
@@ -148,113 +175,143 @@ function initDrag() {
   });
 
   document.addEventListener('mouseup', () => {
-    isDragging = false;
-    document.getElementById('cat-container').style.cursor = 'grab';
+    if (isDragging) {
+      isDragging = false;
+      document.getElementById('cat-container').style.cursor = 'grab';
+    }
   });
 }
 
-// 显示通知
-function showNotification(message, type = 'success') {
-  if (!notificationText || !notification) {
-    console.error('[Desktop Cat] Notification elements not found');
-    return;
+// ============================================
+// 气泡消息
+// ============================================
+function showBubble(message, duration = 2000) {
+  if (!bubble || !bubbleText) return;
+
+  bubbleText.textContent = message;
+  bubble.className = 'bubble show';
+
+  setTimeout(() => {
+    bubble.className = 'bubble hidden';
+  }, duration);
+}
+
+// ============================================
+// 通知
+// ============================================
+function showNotification(message, type = 'success', icon = '') {
+  if (!notification || !notificationText) return;
+
+  const iconEl = notification.querySelector('.notification-icon');
+  if (iconEl) {
+    iconEl.textContent = icon || (type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '⚠️');
   }
 
   notificationText.textContent = message;
   notification.className = `notification ${type}`;
 
-  // 触发动画
   requestAnimationFrame(() => {
     notification.classList.add('show');
   });
 
-  // 3秒后隐藏
   setTimeout(() => {
     notification.classList.remove('show');
     notification.classList.add('hidden');
   }, 3000);
 }
 
-// 播放任务完成动画（增强版）
+// ============================================
+// 动画效果
+// ============================================
+
+// 任务完成动画
 function playTaskDoneAnimation() {
-  if (!cat) return;
+  setState('happy', 1800);
 
-  // 移除空闲状态
-  cat.classList.remove('idle');
-  cat.classList.add('happy');
-
-  // 播放成功音效
+  // 音效
   soundManager.play('success');
+  setTimeout(() => soundManager.play('meow'), 300);
 
-  // 延迟播放猫叫声
-  setTimeout(() => {
-    soundManager.play('meow');
-  }, 300);
-
-  // 创建烟花效果
+  // 粒子效果
   const rect = cat.getBoundingClientRect();
-  particleSystem.createFirework(rect.width / 2, 20);
+  const containerRect = document.getElementById('cat-container').getBoundingClientRect();
+  const centerX = rect.left - containerRect.left + rect.width / 2;
+  const topY = rect.top - containerRect.top;
 
-  // 显示通知
-  showNotification('✅ 任务完成啦！', 'success');
+  particleSystem.createFirework(centerX, topY);
+  setTimeout(() => particleSystem.createConfetti(centerX, topY + 50), 200);
 
-  // 1.5秒后恢复空闲状态
-  setTimeout(() => {
-    cat.classList.remove('happy');
-    cat.classList.add('idle');
-  }, 1500);
+  // 气泡
+  showBubble('任务完成啦！🎉', 2500);
+
+  // 通知
+  showNotification('任务完成！', 'success', '🎉');
 }
 
-// 播放点击动画
+// 点击动画
 function playClickAnimation() {
-  if (!cat) return;
+  setState('click', 500);
 
-  cat.classList.remove('idle');
-  cat.classList.add('click');
-
-  // 播放点击音效
   soundManager.play('click');
 
-  // 创建爱心粒子
+  // 爱心粒子
   const rect = cat.getBoundingClientRect();
-  particleSystem.createHeart(rect.width / 2, 30);
+  const containerRect = document.getElementById('cat-container').getBoundingClientRect();
+  particleSystem.createHeart(
+    rect.left - containerRect.left + rect.width / 2,
+    rect.top - containerRect.top + 10
+  );
 
-  // 显示随机猫咪语录
-  const phrases = ['喵~ 🐱', '摸摸头~', '呼噜呼噜~', '蹭蹭~', '开心！'];
-  const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-  showNotification(randomPhrase, 'info');
-
-  setTimeout(() => {
-    cat.classList.remove('click');
-    cat.classList.add('idle');
-  }, 500);
+  // 随机语录
+  const phrases = [
+    '喵~ 🐱', '摸摸头~', '呼噜呼噜~', '蹭蹭~',
+    '开心！', '再摸摸~', '喵呜~', '喜欢你！',
+    '嘿嘿~', '好舒服~'
+  ];
+  showBubble(phrases[Math.floor(Math.random() * phrases.length)]);
 }
 
-// 播放悬停动画
+// 悬停效果
 function playHoverAnimation() {
-  if (!cat) return;
   cat.classList.add('hover');
+  showBubble('喵？', 1000);
 }
 
 function stopHoverAnimation() {
-  if (!cat) return;
   cat.classList.remove('hover');
 }
 
+// 睡眠切换
+function toggleSleep() {
+  if (currentState === 'sleeping') {
+    setState('idle');
+    showBubble('伸个懒腰~ 😴', 1500);
+  } else {
+    setState('sleeping');
+    showBubble('困了... 💤', 2000);
+  }
+}
+
+// ============================================
 // 初始化
+// ============================================
 document.addEventListener('DOMContentLoaded', () => {
-  // 获取 DOM 元素
+  // 获取元素
   cat = document.getElementById('cat');
-  catBody = cat.querySelector('.cat-body');
-  catHead = cat.querySelector('.cat-head');
-  catTail = cat.querySelector('.cat-tail');
+  catHead = cat.querySelector('.head');
+  catBody = cat.querySelector('.body');
+  catTail = cat.querySelector('.tail');
+  bubble = document.getElementById('bubble');
+  bubbleText = bubble.querySelector('.bubble-text');
   notification = document.getElementById('notification');
   notificationText = notification.querySelector('.notification-text');
 
   // 预加载音效
   soundManager.preload('meow', 'sounds/meow.mp3');
   soundManager.preload('click', 'sounds/click.mp3');
+  soundManager.preload('success', 'sounds/success.mp3');
 
+  // 初始化拖拽
   initDrag();
 
   // 监听任务完成事件
@@ -265,16 +322,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 点击猫咪
+  // 点击事件
   cat.addEventListener('click', (e) => {
     if (!isDragging) {
       playClickAnimation();
     }
   });
 
+  // 双击睡眠
+  cat.addEventListener('dblclick', (e) => {
+    if (!isDragging) {
+      e.preventDefault();
+      toggleSleep();
+    }
+  });
+
   // 悬停效果
   cat.addEventListener('mouseenter', () => {
-    if (!isDragging) {
+    if (!isDragging && currentState !== 'sleeping') {
       playHoverAnimation();
     }
   });
@@ -283,12 +348,31 @@ document.addEventListener('DOMContentLoaded', () => {
     stopHoverAnimation();
   });
 
-  // 右键菜单 - 切换音效
+  // 右键切换音效
   cat.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     const enabled = soundManager.toggle();
-    showNotification(enabled ? '🔊 音效已开启' : '🔇 音效已关闭', 'info');
+    showBubble(enabled ? '🔊 音效开启' : '🔇 音效关闭', 1500);
   });
+
+  // 随机动作
+  setInterval(() => {
+    if (currentState === 'idle' && Math.random() < 0.3) {
+      const actions = [
+        () => showBubble('喵~', 1500),
+        () => showBubble('...', 1000),
+        () => {
+          const rect = cat.getBoundingClientRect();
+          const containerRect = document.getElementById('cat-container').getBoundingClientRect();
+          particleSystem.createStar(
+            rect.left - containerRect.left + rect.width / 2,
+            rect.top - containerRect.top
+          );
+        }
+      ];
+      actions[Math.floor(Math.random() * actions.length)]();
+    }
+  }, 10000);
 
   console.log('[Desktop Cat] Initialized');
 });
