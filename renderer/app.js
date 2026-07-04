@@ -56,241 +56,58 @@ async function setThemeState(state) {
 }
 
 // ============================================
-// 音效 - 猫咪主题音效系统
+// 音效 - 猫咪主题音效系统（使用 ZzFX）
 // ============================================
 const sound = {
-  ctx: null,
   enabled: true,
-
-  init() {
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-  },
 
   play(type) {
     if (!this.enabled) return;
-    this.init();
 
+    // ZzFX 参数: [音量, 随机性, 频率, 起音, 持续, 释放, 波形, 波形曲线, 滑音, delta滑音, 音高跳, 音高跳时间, 重复时间, 噪声, 调制, 压碎, 延迟, 持续音量, 衰减, 颤音]
+    let params;
     switch (type) {
       case 'meow':
-        this._meow();
+        // 猫叫声：中等频率，带滑音下降
+        params = [.5,.05,500,.05,.2,.3,2,1.5,-3,-2,,,,.05,,,,.5,.1];
         break;
       case 'click':
-        this._purr();
+        // 呼噜声：低频，轻柔
+        params = [.3,.02,80,.03,.15,.2,0,1,,10,,,,.02,,,,.3,.05];
         break;
       case 'happy':
-        this._happyMeow();
+        // 开心喵：高频，欢快
+        params = [.4,.05,650,.04,.12,.15,2,2,-5,,,,,,,.1,,,.4,.08];
         break;
       case 'error':
-        this._hiss();
+        // 不满声：低沉
+        params = [.4,.03,200,.05,.25,.3,0,1.5,2,,,,,.1,,,,.3,.1];
         break;
       case 'thinking':
-        this._chirp();
+        // 啾啾声：轻快
+        params = [.3,.05,600,.03,.08,.1,2,2,-8,,,,,,,.05,,,.3,.05];
         break;
       case 'sleep':
-        this._sleepyMeow();
+        // 困倦喵：低沉缓慢
+        params = [.3,.03,300,.08,.3,.4,0,1,-2,,,,,.05,,,,.2,.1];
         break;
+      default:
+        return;
     }
-  },
 
-  // 柔和的猫叫声 - 可爱的"喵~"
-  _meow() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
+    // 调用 ZzFX 并启动播放
+    const node = zzfx(params);
+    if (node && node.start) {
+      node.start();
+    }
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    // 柔和的正弦波，较低的频率
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(500, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
-    osc.frequency.exponentialRampToValueAtTime(450, now + 0.2);
-    osc.frequency.exponentialRampToValueAtTime(350, now + 0.35);
-
-    // 低通滤波器 - 去掉尖锐的高频
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(800, now);
-    filter.Q.setValueAtTime(1, now);
-
-    // 柔和的音量包络
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
-    gain.gain.linearRampToValueAtTime(0.12, now + 0.15);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.45);
-  },
-
-  // 轻柔的呼噜声
-  _purr() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    const gain = ctx.createGain();
-
-    // 低频正弦波
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(60, now);
-
-    // 轻微的频率调制
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(15, now);
-    lfoGain.gain.setValueAtTime(10, now);
-
-    // 非常轻柔的音量
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.08, now + 0.05);
-    gain.gain.linearRampToValueAtTime(0.06, now + 0.2);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    lfo.start(now);
-    osc.stop(now + 0.45);
-    lfo.stop(now + 0.45);
-  },
-
-  // 开心的短促喵声
-  _happyMeow() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    // 两声轻快的喵
-    const notes = [
-      { start: 0, freq: 450, dur: 0.12 },
-      { start: 0.15, freq: 500, dur: 0.15 }
-    ];
-
-    notes.forEach(note => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
-
-      const t = now + note.start;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(note.freq, t);
-      osc.frequency.exponentialRampToValueAtTime(note.freq * 1.1, t + note.dur * 0.5);
-      osc.frequency.exponentialRampToValueAtTime(note.freq * 0.9, t + note.dur);
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(700, t);
-      filter.Q.setValueAtTime(1, t);
-
-      gain.gain.setValueAtTime(0.01, t);
-      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + note.dur);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(t);
-      osc.stop(t + note.dur + 0.01);
-    });
-  },
-
-  // 轻柔的不满声
-  _hiss() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    // 使用柔和的低音代替嘶嘶声
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(500, now);
-    filter.Q.setValueAtTime(1, now);
-
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.4);
-  },
-
-  // 轻柔的啾啾声
-  _chirp() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    // 一声轻柔的啾
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(500, now + 0.06);
-    osc.frequency.exponentialRampToValueAtTime(380, now + 0.1);
-
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.08, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.15);
-  },
-
-  // 困倦的低沉喵声
-  _sleepyMeow() {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    // 非常低沉的频率
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(250, now + 0.3);
-    osc.frequency.exponentialRampToValueAtTime(280, now + 0.5);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(500, now);
-    filter.Q.setValueAtTime(1, now);
-
-    // 缓慢轻柔的音量
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
-    gain.gain.linearRampToValueAtTime(0.08, now + 0.3);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.6);
+    // happy 时播放两声
+    if (type === 'happy') {
+      setTimeout(() => {
+        const node2 = zzfx([.4,.05,750,.04,.12,.18,2,2,-4,,,,,,,.1,,,.4,.08]);
+        if (node2 && node2.start) node2.start();
+      }, 150);
+    }
   },
 
   toggle() {
