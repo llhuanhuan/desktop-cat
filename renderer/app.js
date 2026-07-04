@@ -56,57 +56,56 @@ async function setThemeState(state) {
 }
 
 // ============================================
-// 音效 - 猫咪主题音效系统（使用 ZzFX）
+// 音效 - 猫咪主题音效系统（使用真实音效文件）
 // ============================================
 const sound = {
   enabled: true,
+  audioCache: {},
+
+  init() {
+    // 预加载音效文件
+    const files = {
+      meow1: 'sounds/meow1.mp3',
+      meow2: 'sounds/meow2.mp3',
+      meow3: 'sounds/meow3.mp3',
+      purr1: 'sounds/purr1.mp3',
+      happy1: 'sounds/happy1.mp3'
+    };
+
+    for (const [name, path] of Object.entries(files)) {
+      const audio = new Audio(path);
+      audio.preload = 'auto';
+      this.audioCache[name] = audio;
+    }
+  },
 
   play(type) {
     if (!this.enabled) return;
 
-    // ZzFX 参数: [音量, 随机性, 频率, 起音, 持续, 释放, 波形, 波形曲线, 滑音, delta滑音, 音高跳, 音高跳时间, 重复时间, 噪声, 调制, 压碎, 延迟, 持续音量, 衰减, 颤音]
-    let params;
-    switch (type) {
-      case 'meow':
-        // 猫叫声：中等频率，带滑音下降
-        params = [.5,.05,500,.05,.2,.3,2,1.5,-3,-2,,,,.05,,,,.5,.1];
-        break;
-      case 'click':
-        // 呼噜声：低频，轻柔
-        params = [.3,.02,80,.03,.15,.2,0,1,,10,,,,.02,,,,.3,.05];
-        break;
-      case 'happy':
-        // 开心喵：高频，欢快
-        params = [.4,.05,650,.04,.12,.15,2,2,-5,,,,,,,.1,,,.4,.08];
-        break;
-      case 'error':
-        // 不满声：低沉
-        params = [.4,.03,200,.05,.25,.3,0,1.5,2,,,,,.1,,,,.3,.1];
-        break;
-      case 'thinking':
-        // 啾啾声：轻快
-        params = [.3,.05,600,.03,.08,.1,2,2,-8,,,,,,,.05,,,.3,.05];
-        break;
-      case 'sleep':
-        // 困倦喵：低沉缓慢
-        params = [.3,.03,300,.08,.3,.4,0,1,-2,,,,,.05,,,,.2,.1];
-        break;
-      default:
-        return;
+    // 确保初始化
+    if (Object.keys(this.audioCache).length === 0) {
+      this.init();
     }
 
-    // 调用 ZzFX 并启动播放
-    const node = zzfx(params);
-    if (node && node.start) {
-      node.start();
-    }
+    // 音效映射
+    const soundMap = {
+      'meow': ['meow1', 'meow2', 'meow3'],  // 随机选择一个猫叫
+      'click': ['purr1'],                     // 呼噜声
+      'happy': ['happy1'],                    // 开心
+      'error': ['meow3'],                     // 不满用低沉的猫叫
+      'thinking': ['meow2'],                  // 轻柔的猫叫
+      'sleep': ['purr1']                      // 呼噜声
+    };
 
-    // happy 时播放两声
-    if (type === 'happy') {
-      setTimeout(() => {
-        const node2 = zzfx([.4,.05,750,.04,.12,.18,2,2,-4,,,,,,,.1,,,.4,.08]);
-        if (node2 && node2.start) node2.start();
-      }, 150);
+    const sounds = soundMap[type] || ['meow1'];
+    const soundName = sounds[Math.floor(Math.random() * sounds.length)];
+    const audio = this.audioCache[soundName];
+
+    if (audio) {
+      // 克隆音频以支持重叠播放
+      const clone = audio.cloneNode();
+      clone.volume = 0.5;
+      clone.play().catch(e => console.log('音效播放失败:', e));
     }
   },
 
@@ -115,6 +114,9 @@ const sound = {
     return this.enabled;
   }
 };
+
+// 初始化音效
+sound.init();
 
 // ============================================
 // 粒子效果
