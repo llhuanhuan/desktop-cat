@@ -9,9 +9,10 @@
  */
 
 const http = require('http');
+const path = require('path');
 
 const message = process.argv[2] || 'Claude Code 任务已完成！';
-const project = process.argv[3] || '';
+const project = process.argv[3] || path.basename(process.cwd());
 
 const data = JSON.stringify({ message, project });
 

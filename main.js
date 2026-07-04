@@ -193,7 +193,13 @@ function startNotificationServer() {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          notifyStateChange('happy', 'notification', data.message || '任务已完成！', data.project);
+          // 从 cwd 中提取项目名称
+          let project = data.project || '';
+          if (!project && data.cwd) {
+            const parts = data.cwd.replace(/\\/g, '/').split('/');
+            project = parts[parts.length - 1] || data.cwd;
+          }
+          notifyStateChange('happy', 'notification', data.message || '任务已完成！', project);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
         } catch (e) {

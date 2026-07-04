@@ -112,6 +112,10 @@ async function main() {
       const parts = data.cwd.replace(/\\/g, '/').split('/');
       project = parts[parts.length - 1] || data.cwd;
     }
+
+    // 调试：打印接收到的数据
+    console.log('[clawd-hook] Received:', JSON.stringify(data));
+    console.log('[clawd-hook] Extracted:', { detail, project });
   } catch {}
 
   await postState(state, eventName, detail, project);
