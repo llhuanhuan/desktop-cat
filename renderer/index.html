@@ -8,10 +8,7 @@
 </head>
 <body>
   <div id="cat-container">
-    <!-- SVG 猫咪 -->
-    <div id="cat" class="cat idle">
-      <object data="cat.svg" type="image/svg+xml" id="cat-svg"></object>
-    </div>
+    <canvas id="cat-canvas" width="200" height="200"></canvas>
 
     <!-- 气泡 -->
     <div id="bubble" class="bubble">
@@ -19,7 +16,7 @@
     </div>
   </div>
 
-  <script src="sound-generator.js"></script>
+  <script src="cat-canvas.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
