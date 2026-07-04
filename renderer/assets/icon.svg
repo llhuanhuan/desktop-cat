@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 猫耳朵 -->
+  <polygon points="12,24 20,8 28,24" fill="#DE886D"/>
+  <polygon points="36,24 44,8 52,24" fill="#DE886D"/>
+  <polygon points="15,22 20,12 25,22" fill="#FFB5B5"/>
+  <polygon points="39,22 44,12 49,22" fill="#FFB5B5"/>
+  <!-- 脸 -->
+  <circle cx="32" cy="36" r="20" fill="#DE886D"/>
+  <!-- 眼睛 -->
+  <ellipse cx="24" cy="32" rx="3" ry="4" fill="#000"/>
+  <ellipse cx="40" cy="32" rx="3" ry="4" fill="#000"/>
+  <ellipse cx="25" cy="31" rx="1" ry="1.5" fill="#fff"/>
+  <ellipse cx="41" cy="31" rx="1" ry="1.5" fill="#fff"/>
+  <!-- 鼻子 -->
+  <ellipse cx="32" cy="40" rx="2" ry="1.5" fill="#FFB5B5"/>
+  <!-- 嘴巴 -->
+  <path d="M28,43 Q32,47 36,43" fill="none" stroke="#000" stroke-width="1" stroke-linecap="round"/>
+  <!-- 胡须 -->
+  <line x1="8" y1="36" x2="20" y2="38" stroke="#000" stroke-width="0.8"/>
+  <line x1="8" y1="40" x2="20" y2="40" stroke="#000" stroke-width="0.8"/>
+  <line x1="44" y1="38" x2="56" y2="36" stroke="#000" stroke-width="0.8"/>
+  <line x1="44" y1="40" x2="56" y2="40" stroke="#000" stroke-width="0.8"/>
+</svg>
