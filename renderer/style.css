@@ -10,7 +10,7 @@
 
 body {
   background: transparent;
-  overflow: hidden;
+  overflow: visible;
   user-select: none;
 }
 
@@ -20,6 +20,7 @@ body {
   width: 150px;
   height: 150px;
   cursor: grab;
+  overflow: visible;
 }
 
 #cat-container:active {
