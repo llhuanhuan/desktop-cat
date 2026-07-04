@@ -11,8 +11,9 @@
 const http = require('http');
 
 const message = process.argv[2] || 'Claude Code 任务已完成！';
+const project = process.argv[3] || '';
 
-const data = JSON.stringify({ message });
+const data = JSON.stringify({ message, project });
 
 const options = {
   hostname: 'localhost',

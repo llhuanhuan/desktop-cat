@@ -145,9 +145,9 @@ function createTray() {
 // ============================================
 // 状态通知
 // ============================================
-function notifyStateChange(state, event, detail) {
+function notifyStateChange(state, event, detail, project) {
   if (mainWindow) {
-    mainWindow.webContents.send('state-change', { state, event, detail });
+    mainWindow.webContents.send('state-change', { state, event, detail, project });
   }
 }
 
@@ -174,9 +174,9 @@ function startNotificationServer() {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          const { state, event, detail } = data;
+          const { state, event, detail, project } = data;
           if (state) {
-            notifyStateChange(state, event, detail);
+            notifyStateChange(state, event, detail, project);
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
@@ -192,7 +192,7 @@ function startNotificationServer() {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          notifyStateChange('happy', 'notification', data.message || '任务已完成！');
+          notifyStateChange('happy', 'notification', data.message || '任务已完成！', data.project);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
         } catch (e) {

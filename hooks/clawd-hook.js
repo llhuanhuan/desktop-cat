@@ -49,12 +49,13 @@ async function readStdin() {
   });
 }
 
-function postState(state, eventName, detail) {
+function postState(state, eventName, detail, project) {
   return new Promise((resolve) => {
     const body = JSON.stringify({
       state,
       event: eventName,
       detail: detail || '',
+      project: project || '',
       timestamp: Date.now()
     });
 
@@ -90,14 +91,22 @@ async function main() {
   // 读取 stdin 获取详情
   const stdinData = await readStdin();
   let detail = '';
+  let project = '';
   try {
     const data = JSON.parse(stdinData);
     // 提取有用的详情信息
     if (data.tool_name) detail = data.tool_name;
     else if (data.message) detail = String(data.message).slice(0, 50);
+
+    // 提取项目路径 (cwd 字段)
+    if (data.cwd) {
+      // 只取最后一级目录名作为项目名
+      const parts = data.cwd.replace(/\\/g, '/').split('/');
+      project = parts[parts.length - 1] || data.cwd;
+    }
   } catch {}
 
-  await postState(state, eventName, detail);
+  await postState(state, eventName, detail, project);
 }
 
 main().catch(() => {});

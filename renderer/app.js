@@ -315,8 +315,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 监听 Claude Code 状态变化
   if (window.electronAPI) {
     window.electronAPI.onStateChange((data) => {
-      const { state, event, detail } = data;
-      console.log(`[Desktop Cat] State: ${state} (event: ${event})`);
+      const { state, event, detail, project } = data;
+      console.log(`[Desktop Cat] State: ${state} (event: ${event}, project: ${project})`);
 
       // 根据状态设置持续时间
       let duration = null;
@@ -325,12 +325,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setState(state, duration);
 
-      // 显示状态气泡
+      // 显示状态气泡（带项目名）
       const msgs = STATE_MESSAGES[state];
       if (msgs) {
         const msg = msgs[Math.floor(Math.random() * msgs.length)];
-        const detailText = detail ? ` (${detail})` : '';
-        showBubble(msg + detailText, 2000);
+        const projectText = project ? `[${project}] ` : '';
+        const detailText = detail ? ` - ${detail}` : '';
+        showBubble(projectText + msg + detailText, 2000);
       }
     });
 
