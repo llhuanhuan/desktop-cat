@@ -8,6 +8,7 @@ const fs = require('fs');
 const os = require('os');
 
 let mainWindow;
+let anchorWindow;
 let tray;
 const PORT = 18923;
 
@@ -39,9 +40,65 @@ function saveConfig(updates) {
 }
 
 // ============================================
-// 窗口创建
+// 锚点窗口（任务栏图标）
 // ============================================
-function createWindow() {
+function createAnchorWindow() {
+  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-flash.png');
+
+  anchorWindow = new BrowserWindow({
+    width: 300,
+    height: 300,
+    show: false,
+    skipTaskbar: false,
+    icon: iconPath,
+    title: 'Desktop Cat',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  // 加载一个空白页面
+  anchorWindow.loadURL('data:text/html,<html><body style="background:#00000000"></body></html>');
+
+  // 关键：先显示窗口让任务栏图标出现，然后立即隐藏
+  anchorWindow.once('ready-to-show', () => {
+    anchorWindow.show();
+    // 短暂延迟后隐藏，确保任务栏图标已注册
+    setTimeout(() => {
+      anchorWindow.hide();
+      console.log('[Desktop Cat] Anchor window hidden, taskbar icon should persist');
+    }, 100);
+  });
+
+  // 点击任务栏图标时显示主窗口
+  anchorWindow.on('show', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    // 隐藏锚点窗口
+    setTimeout(() => {
+      if (anchorWindow) anchorWindow.hide();
+    }, 50);
+  });
+
+  // 锚点窗口关闭时，同时关闭主窗口并退出应用
+  anchorWindow.on('closed', () => {
+    anchorWindow = null;
+    if (mainWindow) {
+      mainWindow.close();
+    }
+  });
+
+  console.log('[Desktop Cat] Anchor window created');
+}
+
+// ============================================
+// 主窗口（透明猫咪）
+// ============================================
+function createMainWindow() {
   const config = loadConfig();
   const windowOptions = {
     width: 300,
@@ -50,7 +107,7 @@ function createWindow() {
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    skipTaskbar: true,
+    skipTaskbar: true,  // 主窗口不在任务栏显示
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -70,6 +127,7 @@ function createWindow() {
   // 默认开启点击穿透（透明区域穿透到下面窗口）
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
+  // 主窗口关闭时，不退出应用（锚点窗口仍在）
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -78,7 +136,34 @@ function createWindow() {
   mainWindow.on('move', () => {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
-      saveConfig({ x, y });
+
+      // 边界检测：确保窗口在可见屏幕范围内
+      const { screen } = require('electron');
+      const displays = screen.getAllDisplays();
+      let isVisible = false;
+
+      for (const display of displays) {
+        const { x: dx, y: dy, width, height } = display.bounds;
+        // 检查窗口中心是否在某个显示器范围内
+        const centerX = x + 150;
+        const centerY = y + 150;
+        if (centerX >= dx && centerX <= dx + width && centerY >= dy && centerY <= dy + height) {
+          isVisible = true;
+          break;
+        }
+      }
+
+      // 如果窗口不在任何显示器范围内，恢复到主显示器
+      if (!isVisible && displays.length > 0) {
+        const primaryDisplay = displays[0];
+        const newX = primaryDisplay.bounds.x + 100;
+        const newY = primaryDisplay.bounds.y + 100;
+        mainWindow.setPosition(newX, newY);
+        saveConfig({ x: newX, y: newY });
+        console.log('[Desktop Cat] Window out of bounds, reset to primary display');
+      } else {
+        saveConfig({ x, y });
+      }
     }
   });
 }
@@ -99,10 +184,12 @@ function createTray() {
     {
       label: '显示/隐藏',
       click: () => {
-        if (mainWindow.isVisible()) {
-          mainWindow.hide();
-        } else {
-          mainWindow.show();
+        if (mainWindow) {
+          if (mainWindow.isVisible()) {
+            mainWindow.hide();
+          } else {
+            mainWindow.show();
+          }
         }
       }
     },
@@ -110,6 +197,15 @@ function createTray() {
       label: '测试通知',
       click: () => {
         notifyStateChange('happy', 'test', '测试任务已完成！');
+      }
+    },
+    {
+      label: '显示主窗口',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
       }
     },
     { type: 'separator' },
@@ -134,10 +230,12 @@ function createTray() {
   tray.setContextMenu(contextMenu);
 
   tray.on('click', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+      }
     }
   });
 }
@@ -252,10 +350,14 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
+    // 显示主窗口并聚焦
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
+    }
+    if (anchorWindow) {
+      anchorWindow.show();
     }
   });
 }
@@ -267,6 +369,10 @@ ipcMain.on('move-window', (event, deltaX, deltaY) => {
   if (mainWindow) {
     const [currentX, currentY] = mainWindow.getPosition();
     mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+    // 同步移动锚点窗口
+    if (anchorWindow) {
+      anchorWindow.setPosition(currentX + deltaX, currentY + deltaY);
+    }
   }
 });
 
@@ -285,13 +391,15 @@ if (gotTheLock) {
     console.log('[Desktop Cat] App is ready');
 
     setAutoLaunch(true);
-    createWindow();
+    createAnchorWindow();
+    createMainWindow();
     createTray();
     startNotificationServer();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        createAnchorWindow();
+        createMainWindow();
       }
     });
   });

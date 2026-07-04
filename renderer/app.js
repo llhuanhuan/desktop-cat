@@ -165,13 +165,9 @@ function setState(state, duration) {
   // 切换主题动画
   setThemeState(state);
 
-  // 状态变化音效
-  if (state !== prevState) {
-    if (state === 'thinking') sound.play('thinking');
-    else if (state === 'error') sound.play('error');
-    else if (state === 'happy') sound.play('happy');
-    else if (state === 'sleeping') sound.play('sleep');
-    else if (state === 'working') sound.play('meow');
+  // 只在任务完成时播放音效
+  if (state !== prevState && state === 'happy') {
+    sound.play('happy');
   }
 
   if (duration) {
@@ -270,7 +266,6 @@ function initDrag() {
 // ============================================
 function playTaskDone() {
   setState('happy', 3000);
-  sound.play('happy');
 
   const rect = cat.getBoundingClientRect();
   const container = document.getElementById('cat-container').getBoundingClientRect();
@@ -287,7 +282,6 @@ function playTaskDone() {
 function playClick() {
   cat.classList.add('click');
   setTimeout(() => cat.classList.remove('click'), 400);
-  sound.play('click');
 
   const rect = cat.getBoundingClientRect();
   const container = document.getElementById('cat-container').getBoundingClientRect();
@@ -302,7 +296,6 @@ function playClick() {
 
 function playHover() {
   cat.classList.add('hover');
-  sound.play('meow');
   showBubble('喵？', 1000);
 }
 
