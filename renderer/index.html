@@ -10,37 +10,21 @@
   <div id="cat-container">
     <div id="cat" class="cat idle">
       <!-- 尾巴 -->
-      <div class="tail">
-        <div class="tail-curve"></div>
-      </div>
+      <div class="tail"></div>
 
       <!-- 身体 -->
       <div class="body">
-        <!-- 身体主体 -->
-        <div class="body-shape"></div>
-        <!-- 肚子 -->
+        <div class="body-main"></div>
         <div class="belly"></div>
-        <!-- 花纹 -->
-        <div class="stripe s1"></div>
-        <div class="stripe s2"></div>
-        <div class="stripe s3"></div>
       </div>
 
       <!-- 后腿 -->
-      <div class="paw back left">
-        <div class="paw-pad"></div>
-      </div>
-      <div class="paw back right">
-        <div class="paw-pad"></div>
-      </div>
+      <div class="leg back-left"></div>
+      <div class="leg back-right"></div>
 
       <!-- 前腿 -->
-      <div class="paw front left">
-        <div class="paw-pad"></div>
-      </div>
-      <div class="paw front right">
-        <div class="paw-pad"></div>
-      </div>
+      <div class="leg front-left"></div>
+      <div class="leg front-right"></div>
 
       <!-- 头部 -->
       <div class="head">
@@ -52,65 +36,49 @@
           <div class="ear-inner"></div>
         </div>
 
-        <!-- 脸部 -->
-        <div class="face">
-          <!-- 眼睛 -->
-          <div class="eye left">
+        <!-- 眼睛 -->
+        <div class="eye left">
+          <div class="eye-white">
             <div class="iris">
               <div class="pupil"></div>
+              <div class="shine"></div>
             </div>
-            <div class="shine"></div>
-            <div class="eyelid"></div>
           </div>
-          <div class="eye right">
-            <div class="iris">
-              <div class="pupil"></div>
-            </div>
-            <div class="shine"></div>
-            <div class="eyelid"></div>
-          </div>
-
-          <!-- 鼻子 -->
-          <div class="nose"></div>
-
-          <!-- 嘴巴 -->
-          <div class="mouth">
-            <div class="tongue"></div>
-          </div>
-
-          <!-- 腮红 -->
-          <div class="blush left"></div>
-          <div class="blush right"></div>
-
-          <!-- 胡须 -->
-          <div class="whiskers left">
-            <div class="whisker w1"></div>
-            <div class="whisker w2"></div>
-            <div class="whisker w3"></div>
-          </div>
-          <div class="whiskers right">
-            <div class="whisker w1"></div>
-            <div class="whisker w2"></div>
-            <div class="whisker w3"></div>
-          </div>
+          <div class="eyelid"></div>
         </div>
-      </div>
+        <div class="eye right">
+          <div class="eye-white">
+            <div class="iris">
+              <div class="pupil"></div>
+              <div class="shine"></div>
+            </div>
+          </div>
+          <div class="eyelid"></div>
+        </div>
 
-      <!-- 项圈 -->
-      <div class="collar">
-        <div class="bell"></div>
+        <!-- 腮红 -->
+        <div class="cheek left"></div>
+        <div class="cheek right"></div>
+
+        <!-- 鼻子嘴巴 -->
+        <div class="nose-area">
+          <div class="nose"></div>
+          <div class="mouth"></div>
+        </div>
+
+        <!-- 胡须 -->
+        <div class="whisker left top"></div>
+        <div class="whisker left mid"></div>
+        <div class="whisker left bot"></div>
+        <div class="whisker right top"></div>
+        <div class="whisker right mid"></div>
+        <div class="whisker right bot"></div>
       </div>
     </div>
 
     <!-- 气泡 -->
-    <div id="bubble" class="bubble hidden">
-      <div class="bubble-text"></div>
-    </div>
-
-    <!-- 通知 -->
-    <div id="notification" class="notification hidden">
-      <div class="notification-icon"></div>
-      <div class="notification-text"></div>
+    <div id="bubble" class="bubble">
+      <span class="bubble-text"></span>
     </div>
   </div>
 

@@ -3,63 +3,65 @@
 // ============================================
 
 // 状态管理
-let cat, catHead, catTail, catBody;
-let bubble, bubbleText, notification, notificationText;
+let cat, head, body, tail;
+let bubble, bubbleText;
 let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+let dragStartX = 0, dragStartY = 0;
 let currentState = 'idle';
-let stateTimeout = null;
+let stateTimer = null;
 
 // ============================================
-// 音效管理器
+// 音效管理
 // ============================================
-const soundManager = {
-  sounds: {},
+const sound = {
+  ctx: null,
   enabled: true,
-  useGeneratedSounds: true,
 
-  preload(name, path) {
-    try {
-      const audio = new Audio(path);
-      audio.preload = 'auto';
-      audio.volume = 0.5;
-
-      audio.addEventListener('canplaythrough', () => {
-        this.sounds[name] = audio;
-        this.useGeneratedSounds = false;
-        console.log(`[Sound] Loaded: ${name}`);
-      });
-
-      audio.addEventListener('error', () => {
-        console.log(`[Sound] Using generated sound: ${name}`);
-      });
-
-      audio.load();
-    } catch (e) {
-      console.warn(`[Sound] Failed to load ${name}:`, e);
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
   },
 
-  play(name) {
+  play(type) {
     if (!this.enabled) return;
+    this.init();
 
-    if (this.sounds[name]) {
-      try {
-        const audio = this.sounds[name].cloneNode();
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-        return;
-      } catch (e) {}
-    }
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
 
-    if (this.useGeneratedSounds && window.soundGenerator) {
-      switch (name) {
-        case 'meow': window.soundGenerator.generateMeow(); break;
-        case 'click': window.soundGenerator.generateClick(); break;
-        case 'success': window.soundGenerator.generateSuccess(); break;
-      }
+    switch (type) {
+      case 'meow':
+        this._playTone(600, 0.15, 'sine', 0.3);
+        setTimeout(() => this._playTone(500, 0.2, 'sine', 0.25), 150);
+        break;
+      case 'click':
+        this._playTone(800, 0.08, 'sine', 0.2);
+        break;
+      case 'happy':
+        this._playTone(523, 0.15, 'sine', 0.2);
+        setTimeout(() => this._playTone(659, 0.15, 'sine', 0.2), 100);
+        setTimeout(() => this._playTone(784, 0.2, 'sine', 0.25), 200);
+        break;
     }
+  },
+
+  _playTone(freq, duration, type = 'sine', volume = 0.3) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
   },
 
   toggle() {
@@ -71,82 +73,68 @@ const soundManager = {
 // ============================================
 // 粒子系统
 // ============================================
-const particleSystem = {
-  createHeart(x, y) {
-    const emojis = ['❤️', '💕', '💖', '💗'];
-    this._createParticle(x, y, emojis[Math.floor(Math.random() * emojis.length)], 'heart');
+const particles = {
+  heart(x, y) {
+    const hearts = ['❤️', '💕', '💖', '💗'];
+    this._create(x, y, hearts[Math.floor(Math.random() * hearts.length)], 'heart');
   },
 
-  createStar(x, y) {
-    this._createParticle(x, y, '⭐', 'star');
+  star(x, y) {
+    this._create(x, y, '⭐', 'star');
   },
 
-  createFirework(x, y) {
-    const emojis = ['✨', '🌟', '💫', '🎉', '🎊'];
-    for (let i = 0; i < 8; i++) {
+  sparkle(x, y) {
+    const sparkles = ['✨', '💫', '🌟'];
+    for (let i = 0; i < 5; i++) {
       setTimeout(() => {
-        const offsetX = (Math.random() - 0.5) * 80;
-        const offsetY = (Math.random() - 0.5) * 40;
-        this._createParticle(
-          x + offsetX,
-          y + offsetY,
-          emojis[Math.floor(Math.random() * emojis.length)],
-          'firework'
-        );
-      }, i * 60);
-    }
-  },
-
-  createConfetti(x, y) {
-    const colors = ['🎉', '🎊', '🎀', '🎈', '💐'];
-    for (let i = 0; i < 10; i++) {
-      setTimeout(() => {
-        const offsetX = (Math.random() - 0.5) * 100;
-        this._createParticle(
-          x + offsetX,
-          y - 20,
-          colors[Math.floor(Math.random() * colors.length)],
-          'confetti'
-        );
+        const ox = (Math.random() - 0.5) * 60;
+        this._create(x + ox, y, sparkles[Math.floor(Math.random() * sparkles.length)], 'sparkle');
       }, i * 80);
     }
   },
 
-  _createParticle(x, y, content, className) {
-    const particle = document.createElement('div');
-    particle.className = `particle ${className}`;
-    particle.textContent = content;
-    particle.style.left = `${x}px`;
-    particle.style.top = `${y}px`;
-    document.getElementById('cat-container').appendChild(particle);
-
-    const duration = className === 'confetti' ? 1500 : 1000;
-    setTimeout(() => particle.remove(), duration);
+  _create(x, y, text, cls) {
+    const el = document.createElement('div');
+    el.className = `particle ${cls}`;
+    el.textContent = text;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    document.getElementById('cat-container').appendChild(el);
+    setTimeout(() => el.remove(), 1000);
   }
 };
 
 // ============================================
-// 状态管理
+// 状态控制
 // ============================================
-function setState(newState, duration = null) {
-  if (stateTimeout) {
-    clearTimeout(stateTimeout);
-    stateTimeout = null;
-  }
+function setState(state, duration) {
+  if (stateTimer) clearTimeout(stateTimer);
 
   cat.classList.remove(currentState);
-  currentState = newState;
-  cat.classList.add(newState);
+  currentState = state;
+  cat.classList.add(state);
 
   if (duration) {
-    stateTimeout = setTimeout(() => {
-      setState('idle');
-    }, duration);
+    stateTimer = setTimeout(() => setState('idle'), duration);
   }
 }
 
 // ============================================
-// 拖拽功能
+// 气泡
+// ============================================
+function showBubble(text, duration = 2000) {
+  if (!bubble) return;
+
+  bubbleText.textContent = text;
+  bubble.classList.add('show');
+
+  setTimeout(() => {
+    bubble.classList.remove('show');
+  }, duration);
+}
+
+// ============================================
+// 拖拽
 // ============================================
 function initDrag() {
   const container = document.getElementById('cat-container');
@@ -154,24 +142,21 @@ function initDrag() {
   container.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     isDragging = true;
-    dragOffsetX = e.clientX;
-    dragOffsetY = e.clientY;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
     container.style.cursor = 'grabbing';
     e.preventDefault();
   });
 
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-
-    const dx = e.clientX - dragOffsetX;
-    const dy = e.clientY - dragOffsetY;
-
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
     if (window.electronAPI) {
       window.electronAPI.moveWindow(dx, dy);
     }
-
-    dragOffsetX = e.clientX;
-    dragOffsetY = e.clientY;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
   });
 
   document.addEventListener('mouseup', () => {
@@ -183,112 +168,62 @@ function initDrag() {
 }
 
 // ============================================
-// 气泡消息
-// ============================================
-function showBubble(message, duration = 2000) {
-  if (!bubble || !bubbleText) return;
-
-  bubbleText.textContent = message;
-  bubble.className = 'bubble show';
-
-  setTimeout(() => {
-    bubble.className = 'bubble hidden';
-  }, duration);
-}
-
-// ============================================
-// 通知
-// ============================================
-function showNotification(message, type = 'success', icon = '') {
-  if (!notification || !notificationText) return;
-
-  const iconEl = notification.querySelector('.notification-icon');
-  if (iconEl) {
-    iconEl.textContent = icon || (type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '⚠️');
-  }
-
-  notificationText.textContent = message;
-  notification.className = `notification ${type}`;
-
-  requestAnimationFrame(() => {
-    notification.classList.add('show');
-  });
-
-  setTimeout(() => {
-    notification.classList.remove('show');
-    notification.classList.add('hidden');
-  }, 3000);
-}
-
-// ============================================
-// 动画效果
+// 交互动画
 // ============================================
 
-// 任务完成动画
-function playTaskDoneAnimation() {
-  setState('happy', 1800);
+// 任务完成
+function playTaskDone() {
+  setState('happy', 1500);
+  sound.play('happy');
 
-  // 音效
-  soundManager.play('success');
-  setTimeout(() => soundManager.play('meow'), 300);
-
-  // 粒子效果
+  // 粒子
   const rect = cat.getBoundingClientRect();
-  const containerRect = document.getElementById('cat-container').getBoundingClientRect();
-  const centerX = rect.left - containerRect.left + rect.width / 2;
-  const topY = rect.top - containerRect.top;
+  const container = document.getElementById('cat-container').getBoundingClientRect();
+  const cx = rect.left - container.left + rect.width / 2;
+  const cy = rect.top - container.top;
 
-  particleSystem.createFirework(centerX, topY);
-  setTimeout(() => particleSystem.createConfetti(centerX, topY + 50), 200);
+  particles.sparkle(cx, cy);
+  setTimeout(() => particles.heart(cx, cy - 20), 200);
 
   // 气泡
-  showBubble('任务完成啦！🎉', 2500);
-
-  // 通知
-  showNotification('任务完成！', 'success', '🎉');
+  const msgs = ['任务完成！🎉', '搞定啦！✨', '做好了！💖'];
+  showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
-// 点击动画
-function playClickAnimation() {
-  setState('click', 500);
+// 点击
+function playClick() {
+  setState('click', 400);
+  sound.play('click');
 
-  soundManager.play('click');
-
-  // 爱心粒子
   const rect = cat.getBoundingClientRect();
-  const containerRect = document.getElementById('cat-container').getBoundingClientRect();
-  particleSystem.createHeart(
-    rect.left - containerRect.left + rect.width / 2,
-    rect.top - containerRect.top + 10
+  const container = document.getElementById('cat-container').getBoundingClientRect();
+  particles.heart(
+    rect.left - container.left + rect.width / 2,
+    rect.top - container.top + 10
   );
 
-  // 随机语录
-  const phrases = [
-    '喵~ 🐱', '摸摸头~', '呼噜呼噜~', '蹭蹭~',
-    '开心！', '再摸摸~', '喵呜~', '喜欢你！',
-    '嘿嘿~', '好舒服~'
-  ];
-  showBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+  const msgs = ['喵~ 🐱', '摸摸头~', '呼噜~', '蹭蹭~', '喜欢你！', '嘿嘿~'];
+  showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
-// 悬停效果
-function playHoverAnimation() {
+// 悬停
+function playHover() {
   cat.classList.add('hover');
-  showBubble('喵？', 1000);
+  showBubble('喵？', 800);
 }
 
-function stopHoverAnimation() {
+function stopHover() {
   cat.classList.remove('hover');
 }
 
-// 睡眠切换
+// 睡眠
 function toggleSleep() {
   if (currentState === 'sleeping') {
     setState('idle');
-    showBubble('伸个懒腰~ 😴', 1500);
+    showBubble('伸懒腰~ 😴');
   } else {
     setState('sleeping');
-    showBubble('困了... 💤', 2000);
+    showBubble('困了... 💤');
   }
 }
 
@@ -298,35 +233,25 @@ function toggleSleep() {
 document.addEventListener('DOMContentLoaded', () => {
   // 获取元素
   cat = document.getElementById('cat');
-  catHead = cat.querySelector('.head');
-  catBody = cat.querySelector('.body');
-  catTail = cat.querySelector('.tail');
+  head = cat.querySelector('.head');
+  body = cat.querySelector('.body');
+  tail = cat.querySelector('.tail');
   bubble = document.getElementById('bubble');
   bubbleText = bubble.querySelector('.bubble-text');
-  notification = document.getElementById('notification');
-  notificationText = notification.querySelector('.notification-text');
 
-  // 预加载音效
-  soundManager.preload('meow', 'sounds/meow.mp3');
-  soundManager.preload('click', 'sounds/click.mp3');
-  soundManager.preload('success', 'sounds/success.mp3');
-
-  // 初始化拖拽
+  // 初始化
   initDrag();
 
-  // 监听任务完成事件
+  // 监听任务完成
   if (window.electronAPI) {
-    window.electronAPI.onTaskDone((message) => {
-      console.log('[Desktop Cat] Task done:', message);
-      playTaskDoneAnimation();
+    window.electronAPI.onTaskDone(() => {
+      playTaskDone();
     });
   }
 
-  // 点击事件
+  // 点击
   cat.addEventListener('click', (e) => {
-    if (!isDragging) {
-      playClickAnimation();
-    }
+    if (!isDragging) playClick();
   });
 
   // 双击睡眠
@@ -337,42 +262,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 悬停效果
+  // 悬停
   cat.addEventListener('mouseenter', () => {
-    if (!isDragging && currentState !== 'sleeping') {
-      playHoverAnimation();
-    }
+    if (!isDragging && currentState !== 'sleeping') playHover();
   });
 
-  cat.addEventListener('mouseleave', () => {
-    stopHoverAnimation();
-  });
+  cat.addEventListener('mouseleave', stopHover);
 
   // 右键切换音效
   cat.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    const enabled = soundManager.toggle();
-    showBubble(enabled ? '🔊 音效开启' : '🔇 音效关闭', 1500);
+    const enabled = sound.toggle();
+    showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
 
   // 随机动作
   setInterval(() => {
-    if (currentState === 'idle' && Math.random() < 0.3) {
-      const actions = [
-        () => showBubble('喵~', 1500),
-        () => showBubble('...', 1000),
-        () => {
-          const rect = cat.getBoundingClientRect();
-          const containerRect = document.getElementById('cat-container').getBoundingClientRect();
-          particleSystem.createStar(
-            rect.left - containerRect.left + rect.width / 2,
-            rect.top - containerRect.top
-          );
-        }
-      ];
-      actions[Math.floor(Math.random() * actions.length)]();
+    if (currentState === 'idle' && Math.random() < 0.2) {
+      const rect = cat.getBoundingClientRect();
+      const container = document.getElementById('cat-container').getBoundingClientRect();
+      const cx = rect.left - container.left + rect.width / 2;
+      const cy = rect.top - container.top + 10;
+      particles.star(cx, cy);
+      showBubble('...', 1000);
     }
-  }, 10000);
+  }, 15000);
 
   console.log('[Desktop Cat] Initialized');
 });
