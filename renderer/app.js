@@ -335,13 +335,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setState(state, duration);
 
-      // 显示状态气泡（带项目名）
+      // 显示状态气泡（带项目名和详情）
       const msgs = STATE_MESSAGES[state];
       if (msgs) {
         const msg = msgs[Math.floor(Math.random() * msgs.length)];
-        const projectText = project ? `[${project}] ` : '';
-        const detailText = detail ? ` - ${detail}` : '';
-        showBubble(projectText + msg + detailText, 2000);
+        let bubbleText = '';
+        if (project) bubbleText += `[${project}] `;
+        bubbleText += msg;
+        if (detail) bubbleText += `: ${detail}`;
+        showBubble(bubbleText, 3000);
       }
     });
 

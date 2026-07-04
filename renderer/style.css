@@ -96,7 +96,8 @@ body {
   white-space: nowrap;
   z-index: 20;
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  visibility: hidden;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), visibility 0.3s;
 }
 
 .bubble::after {
@@ -114,6 +115,7 @@ body {
   opacity: 1;
   transform: translateX(-50%) scale(1);
   top: -10px;
+  visibility: visible;
 }
 
 /* ============================================

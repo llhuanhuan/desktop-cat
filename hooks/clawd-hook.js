@@ -94,9 +94,17 @@ async function main() {
   let project = '';
   try {
     const data = JSON.parse(stdinData);
+
     // 提取有用的详情信息
-    if (data.tool_name) detail = data.tool_name;
-    else if (data.message) detail = String(data.message).slice(0, 50);
+    if (data.tool_name) {
+      detail = data.tool_name;
+    } else if (data.message) {
+      detail = String(data.message).slice(0, 80);
+    } else if (data.summary) {
+      detail = String(data.summary).slice(0, 80);
+    } else if (data.content) {
+      detail = String(data.content).slice(0, 80);
+    }
 
     // 提取项目路径 (cwd 字段)
     if (data.cwd) {
