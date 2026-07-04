@@ -1,5 +1,5 @@
 /* ============================================
-   Desktop Cat - SVG 猫咪样式
+   Desktop Cat - 图片猫咪样式
    ============================================ */
 
 * {
@@ -17,8 +17,8 @@ body {
 /* 容器 */
 #cat-container {
   position: relative;
-  width: 160px;
-  height: 180px;
+  width: 150px;
+  height: 150px;
   cursor: grab;
 }
 
@@ -26,21 +26,22 @@ body {
   cursor: grabbing;
 }
 
-/* 猫咪容器 */
+/* 猫咪 */
 .cat {
   position: absolute;
-  bottom: 10px;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 160px;
-  height: 160px;
+  width: 120px;
+  height: 120px;
 }
 
-/* SVG 对象 */
-#cat-svg {
+.cat-img {
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  transition: filter 0.3s ease;
 }
 
 /* ============================================
@@ -52,7 +53,7 @@ body {
 
 @keyframes idle-breathe {
   0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-5px); }
+  50% { transform: translateX(-50%) translateY(-6px); }
 }
 
 /* ============================================
@@ -64,22 +65,29 @@ body {
 
 @keyframes happy-jump {
   0% { transform: translateX(-50%) scale(1); }
-  20% { transform: translateX(-50%) translateY(-30px) scale(1.1); }
-  40% { transform: translateX(-50%) translateY(-25px) scale(1.05); }
+  20% { transform: translateX(-50%) translateY(-35px) scale(1.1); }
+  40% { transform: translateX(-50%) translateY(-28px) scale(1.05); }
   100% { transform: translateX(-50%) scale(1); }
+}
+
+.cat.happy .cat-img {
+  filter:
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))
+    brightness(1.1)
+    saturate(1.2);
 }
 
 /* ============================================
    动画 - 点击状态
    ============================================ */
 .cat.click {
-  animation: click-squish 0.4s ease-out;
+  animation: click-bounce 0.4s ease-out;
 }
 
-@keyframes click-squish {
+@keyframes click-bounce {
   0% { transform: translateX(-50%) scale(1); }
-  30% { transform: translateX(-50%) scale(0.9, 1.1); }
-  60% { transform: translateX(-50%) scale(1.05, 0.95); }
+  30% { transform: translateX(-50%) scale(0.85); }
+  60% { transform: translateX(-50%) scale(1.08); }
   100% { transform: translateX(-50%) scale(1); }
 }
 
@@ -92,8 +100,14 @@ body {
 
 @keyframes hover-wiggle {
   0%, 100% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-50%) rotate(-3deg); }
-  75% { transform: translateX(-50%) rotate(3deg); }
+  25% { transform: translateX(-50%) rotate(-5deg); }
+  75% { transform: translateX(-50%) rotate(5deg); }
+}
+
+.cat.hover .cat-img {
+  filter:
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))
+    brightness(1.05);
 }
 
 /* ============================================
@@ -105,23 +119,30 @@ body {
 
 @keyframes sleep-breathe {
   0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.02, 0.98); }
+  50% { transform: translateX(-50%) scale(1.03, 0.97); }
+}
+
+.cat.sleeping .cat-img {
+  filter:
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))
+    brightness(0.9)
+    saturate(0.8);
 }
 
 /* 睡眠时显示 Zzz */
 .cat.sleeping::after {
   content: '💤';
   position: absolute;
-  top: 0;
-  right: 10px;
-  font-size: 16px;
+  top: -10px;
+  right: 5px;
+  font-size: 18px;
   animation: zzz 2s ease-in-out infinite;
 }
 
 @keyframes zzz {
-  0% { opacity: 0; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-15px); }
-  100% { opacity: 0; transform: translateY(-30px); }
+  0% { opacity: 0; transform: translateY(0) scale(0.8); }
+  50% { opacity: 1; transform: translateY(-18px) scale(1); }
+  100% { opacity: 0; transform: translateY(-36px) scale(0.8); }
 }
 
 /* ============================================
@@ -129,16 +150,16 @@ body {
    ============================================ */
 .bubble {
   position: absolute;
-  top: -20px;
+  top: -15px;
   left: 50%;
   transform: translateX(-50%) scale(0);
   background: white;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: 13px;
   font-family: 'Microsoft YaHei', sans-serif;
   color: #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
   white-space: nowrap;
   z-index: 20;
   opacity: 0;
@@ -148,18 +169,18 @@ body {
 .bubble::after {
   content: '';
   position: absolute;
-  bottom: -5px;
+  bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid white;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
 }
 
 .bubble.show {
   opacity: 1;
   transform: translateX(-50%) scale(1);
-  top: -30px;
+  top: -25px;
 }
 
 /* ============================================
@@ -169,34 +190,34 @@ body {
   position: absolute;
   pointer-events: none;
   z-index: 30;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .particle.heart {
-  animation: float-up 0.8s ease-out forwards;
+  animation: float-heart 1s ease-out forwards;
 }
 
-@keyframes float-up {
+@keyframes float-heart {
   0% { opacity: 1; transform: translateY(0) scale(0.5); }
-  100% { opacity: 0; transform: translateY(-50px) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
 }
 
 .particle.star {
-  animation: star-pop 0.6s ease-out forwards;
+  animation: pop-star 0.7s ease-out forwards;
 }
 
-@keyframes star-pop {
-  0% { opacity: 1; transform: scale(0); }
-  50% { opacity: 1; transform: scale(1.3); }
-  100% { opacity: 0; transform: scale(0); }
+@keyframes pop-star {
+  0% { opacity: 1; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.3) rotate(180deg); }
+  100% { opacity: 0; transform: scale(0) rotate(360deg); }
 }
 
 .particle.sparkle {
-  animation: sparkle-float 1s ease-out forwards;
+  animation: sparkle-up 1s ease-out forwards;
 }
 
-@keyframes sparkle-float {
+@keyframes sparkle-up {
   0% { opacity: 1; transform: translateY(0) scale(0); }
-  30% { opacity: 1; transform: translateY(-20px) scale(1); }
-  100% { opacity: 0; transform: translateY(-60px) scale(0.5); }
+  30% { opacity: 1; transform: translateY(-25px) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.5); }
 }
