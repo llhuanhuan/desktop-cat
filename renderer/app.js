@@ -9,14 +9,16 @@ let currentState = 'idle';
 let stateTimer = null;
 let svgCache = {};
 
-// SVG 文件映射（6 个状态）
-const SVG_MAP = {
-  idle: 'assets/clawd-idle.svg',
-  happy: 'assets/clawd-happy.svg',
-  sleeping: 'assets/clawd-sleeping.svg',
-  thinking: 'assets/clawd-working-thinking.svg',
-  working: 'assets/clawd-working-typing.svg',
-  error: 'assets/clawd-error.svg'
+// 主题文件映射（8 个状态）
+const THEME_MAP = {
+  idle: 'assets/cat/processed/idle.png',
+  happy: 'assets/cat/processed/happy.png',
+  sleeping: 'assets/cat/processed/sleeping.png',
+  thinking: 'assets/cat/processed/thinking.png',
+  working: 'assets/cat/processed/working.png',
+  error: 'assets/cat/processed/error.png',
+  notification: 'assets/cat/processed/notification.png',
+  waking: 'assets/cat/processed/waking.png'
 };
 
 // 状态对应的气泡消息
@@ -28,27 +30,28 @@ const STATE_MESSAGES = {
 };
 
 // ============================================
-// SVG 加载器
+// 主题加载器
 // ============================================
-async function loadSVG(state) {
+async function loadTheme(state) {
   if (svgCache[state]) return svgCache[state];
 
   try {
-    const response = await fetch(SVG_MAP[state]);
+    const response = await fetch(THEME_MAP[state]);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const svgText = await response.text();
-    svgCache[state] = svgText;
-    return svgText;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    svgCache[state] = url;
+    return url;
   } catch (e) {
-    console.error(`[Desktop Cat] Failed to load SVG: ${state}`, e);
+    console.error(`[Desktop Cat] Failed to load theme: ${state}`, e);
     return null;
   }
 }
 
-async function setSVGState(state) {
-  const svgText = await loadSVG(state);
-  if (svgText && svgWrapper) {
-    svgWrapper.innerHTML = svgText;
+async function setThemeState(state) {
+  const url = await loadTheme(state);
+  if (url && svgWrapper) {
+    svgWrapper.innerHTML = `<img src="${url}" alt="${state}" style="width:100%;height:100%;object-fit:contain;">`;
   }
 }
 
@@ -155,8 +158,8 @@ function setState(state, duration) {
   const prevState = currentState;
   currentState = state;
 
-  // 切换 SVG 动画
-  setSVGState(state);
+  // 切换主题动画
+  setThemeState(state);
 
   // 状态变化音效
   if (state !== prevState) {
@@ -297,18 +300,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   bubbleText = bubble.querySelector('.bubble-text');
   svgWrapper = document.getElementById('cat-svg-wrapper');
 
-  // 预加载所有 SVG
+  // 预加载所有主题图片
   await Promise.all([
-    loadSVG('idle'),
-    loadSVG('happy'),
-    loadSVG('sleeping'),
-    loadSVG('thinking'),
-    loadSVG('working'),
-    loadSVG('error')
+    loadTheme('idle'),
+    loadTheme('happy'),
+    loadTheme('sleeping'),
+    loadTheme('thinking'),
+    loadTheme('working'),
+    loadTheme('error'),
+    loadTheme('notification'),
+    loadTheme('waking')
   ]);
 
   // 设置初始状态
-  await setSVGState('idle');
+  await setThemeState('idle');
 
   initDrag();
 
