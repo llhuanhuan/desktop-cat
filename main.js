@@ -6,46 +6,19 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
+const { getConfig, getAllConfig, loadConfig, saveConfig } = require('./shared-config');
 
 let mainWindow;
 let tray;
-const PORT = 18923;
-
-// ============================================
-// 位置记忆
-// ============================================
-const CONFIG_DIR = path.join(os.homedir(), '.desktop-cat');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
-
-function loadConfig() {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    }
-  } catch {}
-  return {};
-}
-
-function saveConfig(updates) {
-  const config = { ...loadConfig(), ...updates };
-  try {
-    if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    }
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
-  } catch (e) {
-    console.error('[Desktop Cat] Failed to save config:', e.message);
-  }
-}
 
 // ============================================
 // 主窗口（透明猫咪）
 // ============================================
 function createMainWindow() {
-  const config = loadConfig();
+  const config = getAllConfig();
   const windowOptions = {
-    width: 300,
-    height: 300,
+    width: config.windowWidth,
+    height: config.windowHeight,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -159,6 +132,7 @@ function createTray() {
       checked: isAutoLaunchEnabled,
       click: (menuItem) => {
         setAutoLaunch(menuItem.checked);
+        saveConfig({ autoLaunch: menuItem.checked });
       }
     },
     { type: 'separator' },
@@ -198,6 +172,7 @@ function notifyStateChange(state, event, detail, project) {
 // HTTP 服务器
 // ============================================
 function startNotificationServer() {
+  const PORT = getConfig('port');
   const server = http.createServer((req, res) => {
     // CORS 头
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -327,7 +302,7 @@ if (gotTheLock) {
   app.whenReady().then(() => {
     console.log('[Desktop Cat] App is ready');
 
-    setAutoLaunch(true);
+    setAutoLaunch(getConfig('autoLaunch'));
     createMainWindow();
     createTray();
     startNotificationServer();

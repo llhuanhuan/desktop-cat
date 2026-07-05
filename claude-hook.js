@@ -10,7 +10,9 @@
 
 const http = require('http');
 const path = require('path');
+const { getConfig } = require('./shared-config');
 
+const PORT = getConfig('port');
 const message = process.argv[2] || 'Claude Code 任务已完成！';
 const project = process.argv[3] || path.basename(process.cwd());
 
@@ -18,7 +20,7 @@ const data = JSON.stringify({ message, project });
 
 const options = {
   hostname: 'localhost',
-  port: 18923,
+  port: PORT,
   path: '/',
   method: 'POST',
   headers: {

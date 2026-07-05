@@ -40,44 +40,18 @@ start.bat
 
 ### 配置 Claude Code Hook
 
-桌面猫咪会自动监听端口 18923。要让它在 Claude Code 任务完成时自动通知，需要更新 Claude Code 的 hook 配置。
+桌面猫咪会自动监听本地端口（默认 18923）。要让它在 Claude Code 任务完成时自动通知，运行安装脚本：
 
-**方法 1: 使用新的通知脚本**
-
-在 Claude Code 设置中，将 Stop hook 的命令改为：
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -NoProfile -File C:\\Users\\Administrator\\.claude\\notify-cat.ps1"
-          }
-        ]
-      }
-    ]
-  }
-}
+```bash
+node hooks/install.js
 ```
 
-**方法 2: 同时保留原有通知**
+这会自动将 hook 注册到 `~/.claude/settings.json` 中。
 
-如果想同时保留 Bark iOS 通知和桌面猫咪通知，可以创建一个组合脚本：
-
-```powershell
-# notify-all.ps1
-# 发送桌面猫咪通知
-powershell -ExecutionPolicy Bypass -NoProfile -File "C:\Users\Administrator\.claude\notify-cat.ps1"
-
-# 发送原有通知（Bark + Windows Toast）
-powershell -ExecutionPolicy Bypass -NoProfile -File "C:\Users\Administrator\.claude\notify-task-done.ps1"
+卸载 hook：
+```bash
+node hooks/install.js uninstall
 ```
-
-然后在 Claude Code 设置中使用这个组合脚本。
 
 ## 项目结构
 
@@ -97,13 +71,21 @@ desktop-cat/
 
 ## 自定义
 
+所有配置存储在 `~/.desktop-cat/config.json`，首次运行时自动创建。可自定义项：
+
+```json
+{
+  "port": 18923,        // 通知服务器端口
+  "windowWidth": 300,   // 窗口宽度
+  "windowHeight": 300,  // 窗口高度
+  "autoLaunch": true,   // 开机自启动
+  "soundEnabled": true  // 音效开关
+}
+```
+
 ### 修改猫咪颜色
 
 编辑 `renderer/style.css`，修改 `#FF9F43`（橙色）为你喜欢的颜色。
-
-### 修改端口
-
-编辑 `main.js` 中的 `PORT` 常量。
 
 ### 添加音效
 
@@ -115,12 +97,12 @@ desktop-cat/
 
 如果看到 "Port 18923 is already in use" 错误，可以：
 1. 关闭占用端口的程序
-2. 或者修改 `main.js` 中的端口号
+2. 或者修改 `~/.desktop-cat/config.json` 中的 `port` 值
 
 ### 通知不工作
 
 1. 确保桌面猫咪应用正在运行
-2. 检查端口 18923 是否被防火墙阻止
+2. 检查端口是否被防火墙阻止
 3. 尝试手动测试：`curl -X POST http://localhost:18923 -H "Content-Type: application/json" -d '{"message":"测试"}'`
 
 ## 开发

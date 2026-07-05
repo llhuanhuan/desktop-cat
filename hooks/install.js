@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { getConfig } = require('../shared-config');
 
 const HOOK_SCRIPT = path.join(__dirname, 'clawd-hook.js');
 const CLAUDE_SETTINGS_DIR = path.join(os.homedir(), '.claude');

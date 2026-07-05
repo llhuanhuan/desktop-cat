@@ -10,8 +10,9 @@
  */
 
 const http = require('http');
+const { getConfig } = require('../shared-config');
 
-const PORT = 18923;
+const PORT = getConfig('port');
 const TIMEOUT_MS = 500;
 
 // Claude Code 事件 → 猫咪状态映射（增强版）
