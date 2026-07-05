@@ -1,23 +1,84 @@
 {
-    "name": "claude-desktop-cat",
+    "name": "desktop-cat",
     "version": "1.0.0",
-    "description": "一只可爱的桌面猫咪，会提醒你 Claude Code 任务完成",
+    "description": "A cute pixel-art desktop cat that reacts to Claude Code in real-time",
     "main": "main.js",
     "scripts": {
         "start": "electron .",
         "dev": "electron . --dev",
         "install-hook": "node hooks/install.js",
-        "uninstall-hook": "node hooks/install.js uninstall"
+        "uninstall-hook": "node hooks/install.js uninstall",
+        "build": "electron-builder --win portable",
+        "build:win": "electron-builder --win",
+        "build:all": "electron-builder --win --mac --linux",
+        "postinstall": "electron-builder install-app-deps"
     },
     "keywords": [
         "electron",
         "desktop-pet",
         "notification",
-        "claude-code"
+        "claude-code",
+        "pixel-art",
+        "cat"
     ],
-    "author": "Administrator",
+    "author": "llhuanhuan",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/llhuanhuan/desktop-cat.git"
+    },
+    "bugs": {
+        "url": "https://github.com/llhuanhuan/desktop-cat/issues"
+    },
+    "homepage": "https://github.com/llhuanhuan/desktop-cat#readme",
     "devDependencies": {
-        "electron": "^43.0.0"
+        "electron": "^43.0.0",
+        "electron-builder": "^26.0.0"
+    },
+    "build": {
+        "appId": "com.llhuanhuan.desktop-cat",
+        "productName": "Desktop Cat",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "main.js",
+            "preload.js",
+            "shared-config.js",
+            "renderer/**/*",
+            "hooks/**/*",
+            "!renderer/assets/cat/*.png",
+            "!renderer/assets/*.svg",
+            "!renderer/assets/*.apng",
+            "!**/*.py"
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": ["x64"]
+                },
+                {
+                    "target": "portable",
+                    "arch": ["x64"]
+                }
+            ],
+            "icon": "renderer/assets/cat/processed/idle.png"
+        },
+        "nsis": {
+            "oneClick": true,
+            "allowToChangeInstallationDirectory": false,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "Desktop Cat"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "renderer/assets/cat/processed/idle.png"
+        },
+        "linux": {
+            "target": "AppImage",
+            "icon": "renderer/assets/cat/processed/idle.png"
+        }
     }
 }

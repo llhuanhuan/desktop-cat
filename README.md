@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-43-blue.svg)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://github.com)
+[![Build](https://github.com/llhuanhuan/desktop-cat/actions/workflows/release.yml/badge.svg)](https://github.com/llhuanhuan/desktop-cat/actions/workflows/release.yml)
 
 > A cute pixel-art desktop cat that lives on your screen and reacts to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) in real-time.
 
@@ -42,8 +43,14 @@
 
 ### Quick Start
 
+**Option A: Download exe (easiest)**
+
+Download the latest `.exe` from [Releases](https://github.com/llhuanhuan/desktop-cat/releases) and run.
+
+**Option B: Build from source**
+
 ```bash
-git clone https://github.com/<you>/desktop-cat.git
+git clone https://github.com/llhuanhuan/desktop-cat.git
 cd desktop-cat
 npm install
 npm start
@@ -82,9 +89,17 @@ node hooks/install.js
 
 ## 安装
 
+### 方式一：下载 exe（推荐）
+
+从 [Releases](https://github.com/llhuanhuan/desktop-cat/releases) 下载最新版 `.exe` 安装包，双击运行即可。
+
+### 方式二：源码运行
+
 ```bash
+git clone https://github.com/llhuanhuan/desktop-cat.git
 cd desktop-cat
 npm install
+npm start
 ```
 
 ## 使用
