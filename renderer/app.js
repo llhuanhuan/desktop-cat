@@ -21,12 +21,15 @@ const THEME_MAP = {
   waking: 'assets/cat/processed/waking.png'
 };
 
-// 状态对应的气泡消息
+// 状态对应的气泡消息（完整版 - 覆盖所有 8 个状态）
 const STATE_MESSAGES = {
   thinking: ['思考中...', '让我想想...', '嗯...'],
   working: ['干活中...', '写代码中...', '马上就好...'],
   error: ['出错了！', '遇到了问题...', '需要帮忙...'],
-  happy: ['搞定啦！✨', '任务完成！🎉', '做好了！💖']
+  happy: ['搞定啦！✨', '任务完成！🎉', '做好了！💖'],
+  waking: ['喵~ 早安！☀️', '醒了~', '新的一天开始啦！'],
+  sleeping: ['困了... 💤', '晚安~', 'zzZ...'],
+  notification: ['有消息！📬', '叮咚~', '看看这个！']
 };
 
 // ============================================
@@ -165,9 +168,10 @@ function setState(state, duration) {
   // 切换主题动画
   setThemeState(state);
 
-  // 只在任务完成时播放音效
-  if (state !== prevState && state === 'happy') {
-    sound.play('happy');
+  // 状态变化时的音效
+  if (state !== prevState) {
+    if (state === 'happy') sound.play('happy');
+    else if (state === 'sleeping') sound.play('sleep');
   }
 
   if (duration) {
@@ -349,6 +353,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       let duration = null;
       if (state === 'happy') duration = 3000;
       else if (state === 'error') duration = 5000;
+      else if (state === 'notification') duration = 4000;
+      else if (state === 'waking') duration = 3000;
 
       setState(state, duration);
 
@@ -362,6 +368,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (detail) bubbleText += `: ${detail}`;
         showBubble(bubbleText, 3000);
       }
+
+      // 特殊状态的音效
+      if (state === 'waking') sound.play('meow');
+      else if (state === 'error') sound.play('error');
+      else if (state === 'notification') sound.play('meow');
     });
 
     // 兼容旧接口

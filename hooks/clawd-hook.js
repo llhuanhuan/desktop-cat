@@ -15,44 +15,44 @@ const { getConfig } = require('../shared-config');
 const PORT = getConfig('port');
 const TIMEOUT_MS = 500;
 
-// Claude Code 事件 → 猫咪状态映射（增强版）
+// Claude Code 事件 → 猫咪状态映射（完整版 - 8 个状态全部使用）
 const STATE_MAP = {
-  // 会话事件
-  'SessionStart': 'idle',
-  'SessionEnd': 'idle',
+  // 会话事件 - 使用 waking/sleeping 状态
+  'SessionStart': 'waking',      // 会话开始：唤醒猫咪
+  'SessionEnd': 'sleeping',      // 会话结束：猫咪睡觉
 
-  // 用户输入
+  // 用户输入 - 思考状态
   'UserPromptSubmit': 'thinking',
 
-  // 工具调用事件 - 细化状态
+  // 工具调用事件 - 工作状态
   'PreToolUse': 'working',
   'PostToolUse': 'working',
   'PostToolUseFailure': 'error',
 
-  // 任务完成事件
+  // 任务完成事件 - 开心状态
   'Stop': 'happy',
   'StopFailure': 'error',
 
-  // 子代理事件
-  'SubagentStart': 'working',
-  'SubagentStop': 'working',
+  // 子代理事件 - 细化状态
+  'SubagentStart': 'thinking',   // 子代理开始：思考中
+  'SubagentStop': 'working',     // 子代理停止：继续工作
 
   // 压缩事件
   'PreCompact': 'working',
   'PostCompact': 'happy',
 
-  // 通知事件
-  'Notification': 'happy',
+  // 通知事件 - 使用专门的通知状态
+  'Notification': 'notification',
 
-  // 新增：思考状态
+  // API 调用 - 思考状态
   'PreApiCall': 'thinking',
   'PostApiCall': 'thinking',
 
-  // 新增：文件操作
+  // 文件操作 - 工作状态
   'FileRead': 'working',
   'FileWrite': 'working',
 
-  // 新增：搜索操作
+  // 搜索操作 - 工作状态
   'SearchStart': 'working',
   'SearchEnd': 'working'
 };
