@@ -63,7 +63,7 @@
                     "arch": ["x64"]
                 }
             ],
-            "icon": "renderer/assets/cat/processed/idle.png"
+            "icon": "renderer/assets/icon.png"
         },
         "nsis": {
             "oneClick": true,
@@ -74,11 +74,11 @@
         },
         "mac": {
             "target": "dmg",
-            "icon": "renderer/assets/cat/processed/idle.png"
+            "icon": "renderer/assets/icon.png"
         },
         "linux": {
             "target": "AppImage",
-            "icon": "renderer/assets/cat/processed/idle.png"
+            "icon": "renderer/assets/icon.png"
         }
     }
 }

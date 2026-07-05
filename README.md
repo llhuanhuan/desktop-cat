@@ -15,6 +15,10 @@
 
 ## 猫咪展示
 
+<p align="center">
+  <img src="renderer/assets/cat-showcase.png" alt="Desktop Cat" width="200">
+</p>
+
 8 种像素风橘猫状态，随 Claude Code 工作流自动切换：
 
 | | | | |
