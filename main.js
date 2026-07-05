@@ -127,7 +127,8 @@ function createMainWindow() {
 // 系统托盘
 // ============================================
 function createTray() {
-  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-cat.png');
+  // 使用处理后的猫咪图标（裁剪头部 + 高质量缩放）
+  const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
 
