@@ -1,7 +1,7 @@
 // Electron 主进程
 console.log('[Desktop Cat] Starting...');
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -10,6 +10,46 @@ const { getConfig, getAllConfig, loadConfig, saveConfig } = require('./shared-co
 
 let mainWindow;
 let tray;
+let server;            // HTTP 服务器引用（用于优雅退出）
+let dndMode = false;   // 免打扰模式
+
+// ============================================
+// 日志持久化
+// ============================================
+const LOG_DIR = path.join(os.homedir(), '.desktop-cat', 'logs');
+const LOG_FILE = path.join(LOG_DIR, `desktop-cat-${new Date().toISOString().slice(0, 10)}.log`);
+
+function ensureLogDir() {
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+    }
+  } catch {}
+}
+
+function writeLog(level, ...args) {
+  const timestamp = new Date().toISOString();
+  const message = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+  const line = `[${timestamp}] [${level}] ${message}`;
+
+  // 控制台输出（使用原始方法，避免递归）
+  if (level === 'ERROR') origError(line);
+  else origLog(line);
+
+  // 文件输出
+  try {
+    ensureLogDir();
+    fs.appendFileSync(LOG_FILE, line + '\n', 'utf8');
+  } catch {}
+}
+
+// 重写 console 方法以同时写文件
+const origLog = console.log;
+const origError = console.error;
+const origWarn = console.warn;
+console.log = (...args) => { writeLog('INFO', ...args); };
+console.error = (...args) => { writeLog('ERROR', ...args); };
+console.warn = (...args) => { writeLog('WARN', ...args); };
 
 // ============================================
 // 主窗口（透明猫咪）
@@ -23,7 +63,7 @@ function createMainWindow() {
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    skipTaskbar: true,  // 主窗口不在任务栏显示
+    skipTaskbar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -40,7 +80,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
 
-  // 默认开启点击穿透（透明区域穿透到下面窗口）
+  // 默认开启点击穿透
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   // 主窗口关闭时退出应用
@@ -54,14 +94,13 @@ function createMainWindow() {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
 
-      // 边界检测：确保窗口在可见屏幕范围内
+      // 边界检测
       const { screen } = require('electron');
       const displays = screen.getAllDisplays();
       let isVisible = false;
 
       for (const display of displays) {
         const { x: dx, y: dy, width, height } = display.bounds;
-        // 检查窗口中心是否在某个显示器范围内
         const centerX = x + 150;
         const centerY = y + 150;
         if (centerX >= dx && centerX <= dx + width && centerY >= dy && centerY <= dy + height) {
@@ -70,7 +109,6 @@ function createMainWindow() {
         }
       }
 
-      // 如果窗口不在任何显示器范围内，恢复到主显示器
       if (!isVisible && displays.length > 0) {
         const primaryDisplay = displays[0];
         const newX = primaryDisplay.bounds.x + 100;
@@ -89,7 +127,6 @@ function createMainWindow() {
 // 系统托盘
 // ============================================
 function createTray() {
-  // 加载猫咪图标 (32x32)
   const iconPath = path.join(__dirname, 'renderer', 'assets', 'tray-icon-cat.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
@@ -123,6 +160,20 @@ function createTray() {
           mainWindow.show();
           mainWindow.focus();
         }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '🌙 免打扰模式',
+      type: 'checkbox',
+      checked: dndMode,
+      click: (menuItem) => {
+        dndMode = menuItem.checked;
+        saveConfig({ dndMode });
+        if (mainWindow) {
+          mainWindow.webContents.send('toggle-dnd', dndMode);
+        }
+        console.log(`[Desktop Cat] DND mode: ${dndMode ? 'ON' : 'OFF'}`);
       }
     },
     { type: 'separator' },
@@ -169,13 +220,20 @@ function notifyStateChange(state, event, detail, project) {
 }
 
 // ============================================
-// HTTP 服务器
+// HTTP 服务器（安全 CORS + 优雅退出）
 // ============================================
 function startNotificationServer() {
   const PORT = getConfig('port');
-  const server = http.createServer((req, res) => {
-    // CORS 头
-    res.setHeader('Access-Control-Allow-Origin', '*');
+
+  server = http.createServer((req, res) => {
+    // 安全 CORS：只允许本地访问
+    const origin = req.headers.origin || '';
+    const referer = req.headers.referer || '';
+    const isLocal = !origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || origin === 'null';
+
+    if (isLocal) {
+      res.setHeader('Access-Control-Allow-Origin', origin || 'http://localhost');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -185,8 +243,14 @@ function startNotificationServer() {
       return;
     }
 
+    // 健康检查
+    if (req.method === 'GET' && (req.url === '/' || req.url === '/health')) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', dnd: dndMode }));
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/state') {
-      // 状态更新接口
       let body = '';
       req.on('data', chunk => { body += chunk.toString(); });
       req.on('end', () => {
@@ -210,7 +274,6 @@ function startNotificationServer() {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          // 从 cwd 中提取项目名称
           let project = data.project || '';
           if (!project && data.cwd) {
             const parts = data.cwd.replace(/\\/g, '/').split('/');
@@ -243,6 +306,19 @@ function startNotificationServer() {
   });
 }
 
+// 优雅关闭 HTTP 服务器
+function stopNotificationServer() {
+  return new Promise((resolve) => {
+    if (!server) return resolve();
+    server.close(() => {
+      console.log('[Desktop Cat] HTTP server closed');
+      resolve();
+    });
+    // 超时强制关闭
+    setTimeout(resolve, 2000);
+  });
+}
+
 // ============================================
 // 自启动设置
 // ============================================
@@ -269,7 +345,6 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    // 显示主窗口并聚焦
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -295,12 +370,39 @@ ipcMain.on('set-ignore-mouse', (event, ignore) => {
   }
 });
 
+// 接收历史数据（用于 dialog 显示）
+ipcMain.on('show-history-dialog', (event, history) => {
+  if (!history || history.length === 0) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Desktop Cat - 通知历史',
+      message: '暂无通知记录'
+    });
+    return;
+  }
+
+  const text = history.map((h, i) => {
+    const proj = h.project ? `[${h.project}] ` : '';
+    return `${i + 1}. ${h.time} ${proj}${h.detail || h.state}`;
+  }).join('\n');
+
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Desktop Cat - 最近通知',
+    message: '最近 10 条通知：',
+    detail: text
+  });
+});
+
 // ============================================
 // 应用启动
 // ============================================
 if (gotTheLock) {
   app.whenReady().then(() => {
     console.log('[Desktop Cat] App is ready');
+
+    // 恢复 DND 设置
+    dndMode = getConfig('dndMode') || false;
 
     setAutoLaunch(getConfig('autoLaunch'));
     createMainWindow();
@@ -320,7 +422,18 @@ if (gotTheLock) {
     }
   });
 
-  app.on('before-quit', () => {
-    console.log('[Desktop Cat] Quitting...');
+  // 优雅退出：先关 HTTP 服务器，再退出
+  app.on('before-quit', async (e) => {
+    if (server) {
+      e.preventDefault();
+      console.log('[Desktop Cat] Shutting down...');
+      await stopNotificationServer();
+      server = null;
+      app.quit();
+    }
+  });
+
+  app.on('quit', () => {
+    console.log('[Desktop Cat] Quit');
   });
 }

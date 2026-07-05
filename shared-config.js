@@ -18,7 +18,8 @@ const DEFAULTS = {
   windowWidth: 300,
   windowHeight: 300,
   autoLaunch: true,
-  soundEnabled: true
+  soundEnabled: true,
+  dndMode: false
 };
 
 function loadConfig() {

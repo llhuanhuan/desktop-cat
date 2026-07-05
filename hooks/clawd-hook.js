@@ -14,45 +14,28 @@ const { getConfig } = require('../shared-config');
 
 const PORT = getConfig('port');
 const TIMEOUT_MS = 500;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 200;
 
-// Claude Code 事件 → 猫咪状态映射（完整版 - 8 个状态全部使用）
+// Claude Code 事件 → 猫咪状态映射
 const STATE_MAP = {
-  // 会话事件 - 使用 waking/sleeping 状态
-  'SessionStart': 'waking',      // 会话开始：唤醒猫咪
-  'SessionEnd': 'sleeping',      // 会话结束：猫咪睡觉
-
-  // 用户输入 - 思考状态
+  'SessionStart': 'waking',
+  'SessionEnd': 'sleeping',
   'UserPromptSubmit': 'thinking',
-
-  // 工具调用事件 - 工作状态
   'PreToolUse': 'working',
   'PostToolUse': 'working',
   'PostToolUseFailure': 'error',
-
-  // 任务完成事件 - 开心状态
   'Stop': 'happy',
   'StopFailure': 'error',
-
-  // 子代理事件 - 细化状态
-  'SubagentStart': 'thinking',   // 子代理开始：思考中
-  'SubagentStop': 'working',     // 子代理停止：继续工作
-
-  // 压缩事件
+  'SubagentStart': 'thinking',
+  'SubagentStop': 'working',
   'PreCompact': 'working',
   'PostCompact': 'happy',
-
-  // 通知事件 - 使用专门的通知状态
   'Notification': 'notification',
-
-  // API 调用 - 思考状态
   'PreApiCall': 'thinking',
   'PostApiCall': 'thinking',
-
-  // 文件操作 - 工作状态
   'FileRead': 'working',
   'FileWrite': 'working',
-
-  // 搜索操作 - 工作状态
   'SearchStart': 'working',
   'SearchEnd': 'working'
 };
@@ -75,7 +58,7 @@ async function readStdin() {
   });
 }
 
-function postState(state, eventName, detail, project) {
+function postState(state, eventName, detail, project, attempt = 1) {
   return new Promise((resolve) => {
     const body = JSON.stringify({
       state,
@@ -94,14 +77,33 @@ function postState(state, eventName, detail, project) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body)
       },
-      timeout: 500
+      timeout: TIMEOUT_MS
     }, (res) => {
       res.resume();
       resolve(true);
     });
 
-    req.on('error', () => resolve(false));
-    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => {
+      if (attempt < MAX_RETRIES) {
+        setTimeout(() => {
+          postState(state, eventName, detail, project, attempt + 1).then(resolve);
+        }, RETRY_DELAY_MS * attempt);
+      } else {
+        resolve(false);
+      }
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      if (attempt < MAX_RETRIES) {
+        setTimeout(() => {
+          postState(state, eventName, detail, project, attempt + 1).then(resolve);
+        }, RETRY_DELAY_MS * attempt);
+      } else {
+        resolve(false);
+      }
+    });
+
     req.write(body);
     req.end();
   });
@@ -112,16 +114,14 @@ async function main() {
   if (!eventName) return;
 
   const state = STATE_MAP[eventName];
-  if (!state) return; // 未知事件忽略
+  if (!state) return;
 
-  // 读取 stdin 获取详情
   const stdinData = await readStdin();
   let detail = '';
   let project = '';
   try {
     const data = JSON.parse(stdinData);
 
-    // 提取有用的详情信息
     if (data.tool_name) {
       detail = data.tool_name;
     } else if (data.message) {
@@ -132,16 +132,10 @@ async function main() {
       detail = String(data.content).slice(0, 80);
     }
 
-    // 提取项目路径 (cwd 字段)
     if (data.cwd) {
-      // 只取最后一级目录名作为项目名
       const parts = data.cwd.replace(/\\/g, '/').split('/');
       project = parts[parts.length - 1] || data.cwd;
     }
-
-    // 调试：打印接收到的数据
-    console.log('[clawd-hook] Received:', JSON.stringify(data));
-    console.log('[clawd-hook] Extracted:', { detail, project });
   } catch {}
 
   await postState(state, eventName, detail, project);

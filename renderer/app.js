@@ -7,7 +7,14 @@ let isDragging = false;
 let dragStartX = 0, dragStartY = 0;
 let currentState = 'idle';
 let stateTimer = null;
-let svgCache = {};
+let imageCache = {};      // { state: { blob, url } }
+
+// 免打扰模式
+let dndMode = false;
+
+// 通知历史（最近 50 条）
+const MAX_HISTORY = 50;
+const notificationHistory = [];
 
 // 主题文件映射（8 个状态）
 const THEME_MAP = {
@@ -21,7 +28,7 @@ const THEME_MAP = {
   waking: 'assets/cat/processed/waking.png'
 };
 
-// 状态对应的气泡消息（完整版 - 覆盖所有 8 个状态）
+// 状态对应的气泡消息
 const STATE_MESSAGES = {
   thinking: ['思考中...', '让我想想...', '嗯...'],
   working: ['干活中...', '写代码中...', '马上就好...'],
@@ -33,17 +40,40 @@ const STATE_MESSAGES = {
 };
 
 // ============================================
-// 主题加载器
+// 通知历史管理
+// ============================================
+function addHistory(state, detail, project) {
+  notificationHistory.unshift({
+    state,
+    detail: detail || '',
+    project: project || '',
+    time: new Date().toLocaleTimeString()
+  });
+  if (notificationHistory.length > MAX_HISTORY) {
+    notificationHistory.pop();
+  }
+}
+
+function getHistoryText() {
+  if (notificationHistory.length === 0) return '暂无通知记录';
+  return notificationHistory.slice(0, 10).map((h, i) => {
+    const proj = h.project ? `[${h.project}] ` : '';
+    return `${i + 1}. ${h.time} ${proj}${h.detail || h.state}`;
+  }).join('\n');
+}
+
+// ============================================
+// 主题加载器（带 Blob URL 缓存管理）
 // ============================================
 async function loadTheme(state) {
-  if (svgCache[state]) return svgCache[state];
+  if (imageCache[state]) return imageCache[state].url;
 
   try {
     const response = await fetch(THEME_MAP[state]);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
-    svgCache[state] = url;
+    imageCache[state] = { blob, url };
     return url;
   } catch (e) {
     console.error(`[Desktop Cat] Failed to load theme: ${state}`, e);
@@ -58,15 +88,24 @@ async function setThemeState(state) {
   }
 }
 
+// 释放所有 Blob URL（应用退出前调用）
+function revokeAllBlobURLs() {
+  for (const state in imageCache) {
+    if (imageCache[state].url) {
+      URL.revokeObjectURL(imageCache[state].url);
+    }
+  }
+  imageCache = {};
+}
+
 // ============================================
-// 音效 - 猫咪主题音效系统（使用真实音效文件）
+// 音效系统（统一使用 HTMLAudioElement，避免多 AudioContext 冲突）
 // ============================================
 const sound = {
   enabled: true,
   audioCache: {},
 
   init() {
-    // 预加载音效文件
     const files = {
       meow1: 'sounds/meow1.mp3',
       meow3: 'sounds/meow3.mp3',
@@ -87,19 +126,17 @@ const sound = {
   play(type) {
     if (!this.enabled) return;
 
-    // 确保初始化
     if (Object.keys(this.audioCache).length === 0) {
       this.init();
     }
 
-    // 音效映射
     const soundMap = {
-      'meow': ['meow1', 'meow3', 'meow4', 'meow5', 'meow6'],  // 随机选择一个猫叫
-      'click': ['purr1'],                                       // 呼噜声
-      'happy': ['happy1'],                                      // 开心
-      'error': ['meow3'],                                       // 不满
-      'thinking': ['meow1'],                                    // 轻柔的猫叫
-      'sleep': ['purr1']                                        // 呼噜声
+      'meow': ['meow1', 'meow3', 'meow4', 'meow5', 'meow6'],
+      'click': ['purr1'],
+      'happy': ['happy1'],
+      'error': ['meow3'],
+      'thinking': ['meow1'],
+      'sleep': ['purr1']
     };
 
     const sounds = soundMap[type] || ['meow1'];
@@ -107,10 +144,9 @@ const sound = {
     const audio = this.audioCache[soundName];
 
     if (audio) {
-      // 克隆音频以支持重叠播放
       const clone = audio.cloneNode();
       clone.volume = 0.5;
-      clone.play().catch(e => console.log('音效播放失败:', e));
+      clone.play().catch(() => {});
     }
   },
 
@@ -185,22 +221,16 @@ function setState(state, duration) {
 function showBubble(text, duration = 2000) {
   if (!bubble) return;
 
-  // 截断长消息，保留完整信息
   const maxLength = 100;
   const isLong = text.length > maxLength;
   const displayText = isLong ? text.substring(0, maxLength) + '...' : text;
 
   bubbleText.textContent = displayText;
 
-  // 如果是长消息，添加 title 属性用于悬停显示完整内容
   if (isLong) {
     bubble.title = text;
     bubble.style.cursor = 'pointer';
-
-    // 点击气泡显示完整消息
-    bubble.onclick = () => {
-      alert(text);
-    };
+    bubble.onclick = () => { alert(text); };
   } else {
     bubble.title = '';
     bubble.style.cursor = 'default';
@@ -238,7 +268,7 @@ function initDrag() {
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     container.style.cursor = 'grabbing';
-    disableClickThrough(); // 拖拽时禁用穿透
+    disableClickThrough();
     e.preventDefault();
   });
 
@@ -257,7 +287,6 @@ function initDrag() {
     if (isDragging) {
       isDragging = false;
       container.style.cursor = 'grab';
-      // 拖拽结束后恢复穿透（鼠标不在猫咪上时）
       if (!cat.matches(':hover')) {
         enableClickThrough();
       }
@@ -349,6 +378,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { state, event, detail, project } = data;
       console.log(`[Desktop Cat] State: ${state} (event: ${event}, project: ${project})`);
 
+      // 记录通知历史
+      addHistory(state, detail, project);
+
       // 根据状态设置持续时间
       let duration = null;
       if (state === 'happy') duration = 3000;
@@ -358,21 +390,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setState(state, duration);
 
-      // 显示状态气泡（带项目名和详情）
-      const msgs = STATE_MESSAGES[state];
-      if (msgs) {
-        const msg = msgs[Math.floor(Math.random() * msgs.length)];
-        let bubbleText = '';
-        if (project) bubbleText += `[${project}] `;
-        bubbleText += msg;
-        if (detail) bubbleText += `: ${detail}`;
-        showBubble(bubbleText, 3000);
+      // 免打扰模式下不显示气泡，但仍然切换动画
+      if (!dndMode) {
+        const msgs = STATE_MESSAGES[state];
+        if (msgs) {
+          const msg = msgs[Math.floor(Math.random() * msgs.length)];
+          let text = '';
+          if (project) text += `[${project}] `;
+          text += msg;
+          if (detail) text += `: ${detail}`;
+          showBubble(text, 3000);
+        }
       }
 
-      // 特殊状态的音效
+      // 特殊状态的音效（DND 模式下也播放，但音量降低）
       if (state === 'waking') sound.play('meow');
       else if (state === 'error') sound.play('error');
       else if (state === 'notification') sound.play('meow');
+    });
+
+    // 监听 DND 切换（来自主进程）
+    window.electronAPI.onToggleDND((enabled) => {
+      dndMode = enabled;
+      showBubble(enabled ? '🌙 免打扰模式' : '🔔 正常模式', 1500);
+    });
+
+    // 监听显示历史请求
+    window.electronAPI.onShowHistory(() => {
+      const text = getHistoryText();
+      showBubble('📋 最近通知', 5000);
+      // 同时通过 IPC 返回历史数据
+      if (window.electronAPI.sendHistory) {
+        window.electronAPI.sendHistory(notificationHistory.slice(0, 10));
+      }
     });
 
     // 兼容旧接口
@@ -413,8 +463,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
 
-  // 随机动作（空闲时）
+  // 随机动作（空闲时，DND 模式下跳过）
   setInterval(() => {
+    if (dndMode) return;
     if (currentState === 'idle' && Math.random() < 0.25) {
       const rect = cat.getBoundingClientRect();
       const container = document.getElementById('cat-container').getBoundingClientRect();
@@ -427,5 +478,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }, 15000);
 
-  console.log('[Desktop Cat] Initialized with 6 SVG states + click-through');
+  // 应用退出前释放 Blob URL
+  window.addEventListener('beforeunload', () => {
+    revokeAllBlobURLs();
+  });
+
+  console.log('[Desktop Cat] Initialized with 8 states + click-through');
 });
