@@ -3,13 +3,14 @@
  * Desktop Cat - Claude Code Hook 安装脚本
  *
  * 自动将 hook 注册到 Claude Code 的配置中
+ * 使用 Claude Code 新格式（matcher + hooks 数组）
+ *
  * 运行一次即可，之后 Claude Code 会自动调用 hook
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { getConfig } = require('../shared-config');
 
 const HOOK_SCRIPT = path.join(__dirname, 'clawd-hook.js');
 const CLAUDE_SETTINGS_DIR = path.join(os.homedir(), '.claude');
@@ -31,6 +32,30 @@ const EVENTS = [
   'Notification',
   'SessionEnd'
 ];
+
+// Claude Code 新格式的 hook 条目
+function makeHookEntry(event) {
+  return {
+    matcher: '',
+    hooks: [
+      {
+        type: 'command',
+        command: `node "${HOOK_SCRIPT}" ${event}`,
+        timeout: 5000
+      }
+    ]
+  };
+}
+
+// 检查某个条目是否包含 clawd-hook
+function isClawdHook(entry) {
+  // 新格式：entry.hooks 数组内有 command 包含 clawd-hook.js
+  if (Array.isArray(entry.hooks)) {
+    return entry.hooks.some(h => h.command && h.command.includes('clawd-hook.js'));
+  }
+  // 旧格式：直接有 command 字段
+  return entry.command && entry.command.includes('clawd-hook.js');
+}
 
 function install() {
   console.log('🐱 Desktop Cat Hook 安装程序');
@@ -62,27 +87,31 @@ function install() {
   // 注册每个事件
   let registered = 0;
   for (const event of EVENTS) {
-    const hookEntry = {
-      command: `node "${HOOK_SCRIPT}" ${event}`,
-      timeout: 5000
-    };
-
-    // 检查是否已注册
     const existing = settings.hooks[event];
+
     if (Array.isArray(existing)) {
-      // 检查是否已有相同的 hook
-      const alreadyExists = existing.some(h => h.command && h.command.includes('clawd-hook.js'));
+      // 先移除旧格式的 clawd-hook 条目（直接 command 字段的旧格式）
+      const before = existing.length;
+      settings.hooks[event] = existing.filter(h => !isClawdHook(h));
+      const removed = before - settings.hooks[event].length;
+
+      // 检查新格式是否已存在
+      const alreadyExists = settings.hooks[event].some(h => isClawdHook(h));
       if (alreadyExists) {
         console.log(`⏭️  ${event}: 已注册`);
         continue;
       }
-      existing.push(hookEntry);
-    } else {
-      settings.hooks[event] = [hookEntry];
-    }
 
-    registered++;
-    console.log(`✅ ${event}: 已注册`);
+      // 追加新格式条目
+      settings.hooks[event].push(makeHookEntry(event));
+      registered++;
+      console.log(`✅ ${event}: 已注册${removed > 0 ? '（清理旧格式）' : ''}`);
+    } else {
+      // 事件不存在，直接创建
+      settings.hooks[event] = [makeHookEntry(event)];
+      registered++;
+      console.log(`✅ ${event}: 已注册`);
+    }
   }
 
   // 写入配置
@@ -124,18 +153,15 @@ function uninstall() {
     if (!Array.isArray(settings.hooks[event])) continue;
 
     const before = settings.hooks[event].length;
-    settings.hooks[event] = settings.hooks[event].filter(
-      h => !h.command || !h.command.includes('clawd-hook.js')
-    );
+    settings.hooks[event] = settings.hooks[event].filter(h => !isClawdHook(h));
 
     if (settings.hooks[event].length === 0) {
       delete settings.hooks[event];
     }
 
-    removed += before - settings.hooks[event].length;
+    removed += before - (settings.hooks[event] ? settings.hooks[event].length : 0);
   }
 
-  // 如果 hooks 对象为空，删除它
   if (Object.keys(settings.hooks).length === 0) {
     delete settings.hooks;
   }
