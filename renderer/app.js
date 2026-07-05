@@ -107,13 +107,32 @@ const sound = {
 
   init() {
     const files = {
+      // 原有音效
       meow1: 'sounds/meow1.mp3',
       meow3: 'sounds/meow3.mp3',
       meow4: 'sounds/meow4.mp3',
       meow5: 'sounds/meow5.mp3',
       meow6: 'sounds/meow6.mp3',
       purr1: 'sounds/purr1.mp3',
-      happy1: 'sounds/happy1.mp3'
+      happy1: 'sounds/happy1.mp3',
+      // 新增可爱变体 - 小猫版（高音调）
+      kitten_meow1: 'sounds/kitten_meow1.mp3',
+      kitten_meow2: 'sounds/kitten_meow2.mp3',
+      kitten_meow3: 'sounds/kitten_meow3.mp3',
+      // 新增可爱变体 - 大猫版（低音调）
+      adult_meow1: 'sounds/adult_meow1.mp3',
+      adult_meow2: 'sounds/adult_meow2.mp3',
+      adult_meow3: 'sounds/adult_meow3.mp3',
+      // 新增可爱变体 - 调皮版（快速短促）
+      playful_meow1: 'sounds/playful_meow1.mp3',
+      playful_meow2: 'sounds/playful_meow2.mp3',
+      playful_meow3: 'sounds/playful_meow3.mp3',
+      // 新增呼噜声变体
+      soft_purr: 'sounds/soft_purr.mp3',
+      happy_purr: 'sounds/happy_purr.mp3',
+      // 新增开心音效变体
+      excited_cat: 'sounds/excited_cat.mp3',
+      gentle_happy: 'sounds/gentle_happy.mp3'
     };
 
     for (const [name, path] of Object.entries(files)) {
@@ -131,12 +150,12 @@ const sound = {
     }
 
     const soundMap = {
-      'meow': ['meow1', 'meow3', 'meow4', 'meow5', 'meow6'],
-      'click': ['purr1'],
-      'happy': ['happy1'],
-      'error': ['meow3'],
-      'thinking': ['meow1'],
-      'sleep': ['purr1']
+      'meow': ['meow1', 'meow3', 'meow4', 'meow5', 'meow6', 'kitten_meow1', 'kitten_meow2', 'kitten_meow3', 'adult_meow1', 'adult_meow2', 'playful_meow1', 'playful_meow2'],
+      'click': ['purr1', 'soft_purr', 'happy_purr'],
+      'happy': ['happy1', 'excited_cat', 'gentle_happy'],
+      'error': ['meow3', 'adult_meow3'],
+      'thinking': ['meow1', 'kitten_meow1', 'playful_meow1'],
+      'sleep': ['purr1', 'soft_purr']
     };
 
     const sounds = soundMap[type] || ['meow1'];
@@ -194,10 +213,32 @@ const particles = {
 };
 
 // ============================================
-// 状态控制
+// 状态控制（带优先级保护）
 // ============================================
+const STATE_PRIORITY = {
+  idle: 0,
+  working: 1,
+  thinking: 1,
+  waking: 2,
+  sleeping: 2,
+  error: 3,
+  happy: 4,
+  notification: 4
+};
+
+let stateProtected = false;   // 高优先级状态保护中
+let stateProtectTimer = null; // 保护计时器
+
 function setState(state, duration) {
+  // 高优先级状态保护：happy/notification 不被低优先级状态覆盖
+  if (stateProtected && STATE_PRIORITY[state] < STATE_PRIORITY[currentState]) {
+    return;
+  }
+
   if (stateTimer) clearTimeout(stateTimer);
+  if (stateProtectTimer) clearTimeout(stateProtectTimer);
+  stateProtected = false;
+
   const prevState = currentState;
   currentState = state;
 
@@ -212,6 +253,14 @@ function setState(state, duration) {
 
   if (duration) {
     stateTimer = setTimeout(() => setState('idle'), duration);
+
+    // 高优先级状态保护：防止被低优先级状态立即覆盖
+    if (STATE_PRIORITY[state] >= 3) {
+      stateProtected = true;
+      stateProtectTimer = setTimeout(() => {
+        stateProtected = false;
+      }, Math.min(duration, 4000)); // 最多保护 4 秒
+    }
   }
 }
 
@@ -383,7 +432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 根据状态设置持续时间
       let duration = null;
-      if (state === 'happy') duration = 3000;
+      if (state === 'happy') duration = 5000;
       else if (state === 'error') duration = 5000;
       else if (state === 'notification') duration = 4000;
       else if (state === 'waking') duration = 3000;
@@ -399,7 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (project) text += `[${project}] `;
           text += msg;
           if (detail) text += `: ${detail}`;
-          showBubble(text, 3000);
+          showBubble(text, state === 'happy' ? 5000 : 3000);
         }
       }
 
