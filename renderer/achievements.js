@@ -1,25 +1,25 @@
 // ============================================
-// Desktop Cat - 成就与外观系统
+// Desktop Cat - 成就系统
 // ============================================
 
 const ACHIEVEMENTS = {
   // 使用时长类
-  first_day:    { name: '初来乍到',     desc: '第一次使用 Desktop Cat',  icon: '🎉', reward: null },
-  week_streak:  { name: '忠实伙伴',     desc: '连续使用 7 天',          icon: '💛', reward: 'scarf_red' },
-  month_streak: { name: '铁杆猫奴',     desc: '连续使用 30 天',         icon: '👑', reward: 'crown' },
+  first_day:    { name: '初来乍到',   desc: '第一次使用 Desktop Cat', icon: '🎉', reward: null },
+  week_streak:  { name: '忠实伙伴',   desc: '连续使用 7 天',         icon: '💛', reward: 'scarf_red' },
+  month_streak: { name: '铁杆猫奴',   desc: '连续使用 30 天',        icon: '👑', reward: 'crown' },
 
   // 代码成就类
-  task_10:      { name: '小试牛刀',     desc: '完成 10 个任务',         icon: '⚡', reward: null },
-  task_100:     { name: '百炼成钢',     desc: '完成 100 个任务',        icon: '🔥', reward: 'glasses' },
-  task_500:     { name: '代码大师',     desc: '完成 500 个任务',        icon: '💎', reward: 'cape' },
-  no_error_10:  { name: '完美主义者',   desc: '连续 10 次任务无错误',    icon: '✨', reward: 'halo' },
+  task_10:      { name: '小试牛刀',   desc: '完成 10 个任务',        icon: '⚡', reward: null },
+  task_100:     { name: '百炼成钢',   desc: '完成 100 个任务',       icon: '🔥', reward: 'glasses' },
+  task_500:     { name: '代码大师',   desc: '完成 500 个任务',       icon: '💎', reward: 'cape' },
+  no_error_10:  { name: '完美主义者', desc: '连续 10 次任务无错误',   icon: '✨', reward: 'halo' },
 
   // 互动类
-  pet_50:       { name: '猫咪挚友',     desc: '摸猫咪 50 次',           icon: '🤗', reward: 'bow_blue' },
-  night_owl:    { name: '夜猫子',       desc: '凌晨 2 点还在写代码',     icon: '🦉', reward: 'coffee' },
-  early_bird:   { name: '早起的鸟儿',   desc: '早上 6 点就开始写代码',   icon: '🐦', reward: null },
-  pet_100:      { name: '猫咪恋人',     desc: '摸猫咪 100 次',          icon: '💕', reward: 'bell' },
-  belly_rub:    { name: '肚皮猎人',     desc: '触发翻肚皮彩蛋',         icon: '🐱', reward: 'hat_wizard' },
+  pet_50:       { name: '猫咪挚友',   desc: '摸猫咪 50 次',          icon: '🤗', reward: 'bow_blue' },
+  pet_200:      { name: '猫咪灵魂伴侣', desc: '摸猫咪 200 次',       icon: '💕', reward: 'bell' },
+  night_owl:    { name: '夜猫子',     desc: '凌晨 2 点还在写代码',    icon: '🦉', reward: 'coffee' },
+  early_bird:   { name: '早起的鸟儿', desc: '早上 6 点就开始写代码',  icon: '🐦', reward: 'fish' },
+  holiday:      { name: '节日精灵',   desc: '在节日期间使用',         icon: '🎊', reward: 'hat_wizard' },
 };
 
 const ACCESSORIES = {
@@ -37,162 +37,163 @@ const ACCESSORIES = {
 
 class AchievementSystem {
   constructor() {
-    this.unlocked = new Set();
-    this.progress = {
-      task_count: 0,
-      pet_count: 0,
-      streak_days: 0,
-      last_active_date: null,
-      consecutive_no_error: 0,
+    this.data = {
+      unlocked: ['first_day'],
+      progress: {
+        task_count: 0,
+        pet_count: 0,
+        streak_days: 1,
+        last_active_date: new Date().toDateString(),
+        consecutive_no_error: 0,
+      },
+      accessories: {
+        unlocked: [],
+        equipped: {} // slot -> accessory id
+      }
     };
-    this.equipped = {}; // slot -> accessory id
-    this.onUnlock = null; // callback: (achievement) => void
-    this.onAccessoryChange = null; // callback: () => void
+    this._listeners = [];
   }
 
   // 加载持久化数据
-  load(data) {
-    if (!data) return;
-    if (data.unlocked) this.unlocked = new Set(data.unlocked);
-    if (data.progress) this.progress = { ...this.progress, ...data.progress };
-    if (data.equipped) this.equipped = { ...data.equipped };
+  load(savedData) {
+    if (savedData) {
+      this.data = {
+        ...this.data,
+        ...savedData,
+        progress: { ...this.data.progress, ...(savedData.progress || {}) },
+        accessories: { ...this.data.accessories, ...(savedData.accessories || {}) }
+      };
+    }
+    // 检查连续使用天数
+    this._checkStreak();
+    // 检查首次使用成就
+    this.check('first_day');
   }
 
-  // 序列化
-  save() {
-    return {
-      unlocked: Array.from(this.unlocked),
-      progress: this.progress,
-      equipped: this.equipped,
-    };
+  // 检查连续使用天数
+  _checkStreak() {
+    const today = new Date().toDateString();
+    const last = this.data.progress.last_active_date;
+    if (last !== today) {
+      const lastDate = new Date(last);
+      const todayDate = new Date(today);
+      const diff = Math.floor((todayDate - lastDate) / 86400000);
+      if (diff === 1) {
+        this.data.progress.streak_days++;
+      } else if (diff > 1) {
+        this.data.progress.streak_days = 1;
+      }
+      this.data.progress.last_active_date = today;
+    }
+    // 检查连续天数成就
+    if (this.data.progress.streak_days >= 7) this.check('week_streak');
+    if (this.data.progress.streak_days >= 30) this.check('month_streak');
   }
 
   // 记录任务完成
-  recordTask(success = true) {
-    this.progress.task_count++;
-    this._updateStreak();
-
-    if (success) {
-      this.progress.consecutive_no_error++;
+  recordTask(hasError = false) {
+    this.data.progress.task_count++;
+    if (hasError) {
+      this.data.progress.consecutive_no_error = 0;
     } else {
-      this.progress.consecutive_no_error = 0;
+      this.data.progress.consecutive_no_error++;
     }
 
-    this._checkAchievements();
-    return this.save();
+    // 检查任务数成就
+    if (this.data.progress.task_count >= 10) this.check('task_10');
+    if (this.data.progress.task_count >= 100) this.check('task_100');
+    if (this.data.progress.task_count >= 500) this.check('task_500');
+
+    // 检查无错误成就
+    if (this.data.progress.consecutive_no_error >= 10) this.check('no_error_10');
   }
 
   // 记录摸头
   recordPet() {
-    this.progress.pet_count++;
-    this._updateStreak();
-    this._checkAchievements();
-    return this.save();
+    this.data.progress.pet_count++;
+    if (this.data.progress.pet_count >= 50) this.check('pet_50');
+    if (this.data.progress.pet_count >= 200) this.check('pet_200');
   }
 
-  // 记录彩蛋触发
-  recordEasterEgg(id) {
-    if (id === 'belly') {
-      this._tryUnlock('belly_rub');
+  // 记录时间段使用
+  recordTimeOfDay(hour) {
+    if (hour >= 0 && hour < 2) this.check('night_owl');
+    if (hour >= 6 && hour < 7) this.check('early_bird');
+  }
+
+  // 记录节日使用
+  recordHoliday() {
+    this.check('holiday');
+  }
+
+  // 检查并解锁成就
+  check(id) {
+    if (this.data.unlocked.includes(id)) return false;
+    if (!ACHIEVEMENTS[id]) return false;
+
+    this.data.unlocked.push(id);
+    const achievement = ACHIEVEMENTS[id];
+
+    // 解锁奖励配件
+    if (achievement.reward && !this.data.accessories.unlocked.includes(achievement.reward)) {
+      this.data.accessories.unlocked.push(achievement.reward);
     }
-    return this.save();
-  }
 
-  // 检查时间类成就
-  checkTimeAchievements() {
-    const now = new Date();
-    const hour = now.getHours();
-    if (hour >= 0 && hour < 2) this._tryUnlock('night_owl');
-    if (hour >= 6 && hour < 7) this._tryUnlock('early_bird');
-    this._tryUnlock('first_day');
+    // 通知监听器
+    this._notify('achievement', { id, ...achievement });
+
+    return true;
   }
 
   // 装备配件
   equip(accessoryId) {
+    if (!this.data.accessories.unlocked.includes(accessoryId)) return false;
     const acc = ACCESSORIES[accessoryId];
-    if (!acc || !this.unlocked.has(accessoryId)) return false;
-    this.equipped[acc.slot] = accessoryId;
-    if (this.onAccessoryChange) this.onAccessoryChange();
-    return this.save();
+    if (!acc) return false;
+    this.data.accessories.equipped[acc.slot] = accessoryId;
+    this._notify('equip', { id: accessoryId, ...acc });
+    return true;
   }
 
   // 卸下配件
   unequip(slot) {
-    delete this.equipped[slot];
-    if (this.onAccessoryChange) this.onAccessoryChange();
-    return this.save();
+    delete this.data.accessories.equipped[slot];
+    this._notify('unequip', { slot });
   }
 
-  // 获取装备的配件列表
-  getEquippedAccessories() {
-    return Object.entries(this.equipped).map(([slot, id]) => ({
-      id,
+  // 获取当前装备的配件列表
+  getEquipped() {
+    return Object.entries(this.data.accessories.equipped).map(([slot, id]) => ({
       slot,
-      ...ACCESSORIES[id],
+      id,
+      ...ACCESSORIES[id]
     }));
   }
 
-  // 获取已解锁的配件列表
+  // 获取所有已解锁成就
+  getUnlocked() {
+    return this.data.unlocked.map(id => ({ id, ...ACHIEVEMENTS[id] }));
+  }
+
+  // 获取所有已解锁配件
   getUnlockedAccessories() {
-    return Array.from(this.unlocked)
-      .filter(id => ACCESSORIES[id])
-      .map(id => ({ id, ...ACCESSORIES[id] }));
+    return this.data.accessories.unlocked.map(id => ({ id, ...ACCESSORIES[id] }));
   }
 
-  // 私有方法
-  _updateStreak() {
-    const today = new Date().toDateString();
-    if (this.progress.last_active_date === today) return;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (this.progress.last_active_date === yesterday.toDateString()) {
-      this.progress.streak_days++;
-    } else {
-      this.progress.streak_days = 1;
-    }
-    this.progress.last_active_date = today;
+  // 注册监听器
+  on(callback) {
+    this._listeners.push(callback);
   }
 
-  _checkAchievements() {
-    const p = this.progress;
-
-    // 任务数
-    if (p.task_count >= 10) this._tryUnlock('task_10');
-    if (p.task_count >= 100) this._tryUnlock('task_100');
-    if (p.task_count >= 500) this._tryUnlock('task_500');
-
-    // 连续无错
-    if (p.consecutive_no_error >= 10) this._tryUnlock('no_error_10');
-
-    // 摸头数
-    if (p.pet_count >= 50) this._tryUnlock('pet_50');
-    if (p.pet_count >= 100) this._tryUnlock('pet_100');
-
-    // 连续使用
-    if (p.streak_days >= 7) this._tryUnlock('week_streak');
-    if (p.streak_days >= 30) this._tryUnlock('month_streak');
-
-    // 时间
-    this.checkTimeAchievements();
+  _notify(type, data) {
+    this._listeners.forEach(fn => fn(type, data));
   }
 
-  _tryUnlock(id) {
-    if (this.unlocked.has(id)) return;
-    this.unlocked.add(id);
-    const achievement = ACHIEVEMENTS[id];
-    // 先装备奖励配件，再触发回调（回调会保存数据）
-    if (achievement && achievement.reward && ACCESSORIES[achievement.reward]) {
-      this.equipped[ACCESSORIES[achievement.reward].slot] = achievement.reward;
-      if (this.onAccessoryChange) this.onAccessoryChange();
-    }
-    if (achievement && this.onUnlock) {
-      this.onUnlock(achievement);
-    }
+  // 用于持久化的数据
+  toJSON() {
+    return this.data;
   }
 }
 
-// 导出
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { AchievementSystem, ACHIEVEMENTS, ACCESSORIES };
-}
+// 全局实例
+const achievements = new AchievementSystem();

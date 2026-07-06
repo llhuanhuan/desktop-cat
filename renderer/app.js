@@ -23,7 +23,8 @@ let lastPawTime = 0;
 const PAW_INTERVAL = 300;
 const PAW_LIFETIME = 3000;
 
-// 互动累计（使用 achievements.progress.pet_count，此处仅作兼容回退）
+// 互动累计
+let totalPetCount = 0;
 
 // 彩蛋系统
 const EASTER_EGG_LOG = {};
@@ -257,40 +258,42 @@ sound.init();
 // ============================================
 // 成就系统初始化
 // ============================================
-const achievements = new AchievementSystem();
-
-// 成就解锁回调
-achievements.onUnlock = (achievement) => {
-  console.log(`[Desktop Cat] Achievement unlocked: ${achievement.name}`);
-  // Toast 通知
-  const container = document.getElementById('cat-container');
-  const toast = document.createElement('div');
-  toast.className = 'achievement-toast';
-  toast.textContent = `${achievement.icon} 解锁成就: ${achievement.name}`;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
-  // 特效
-  const rect = cat.getBoundingClientRect();
-  const cRect = container.getBoundingClientRect();
-  const cx = rect.left - cRect.left + rect.width / 2;
-  const cy = rect.top - cRect.top;
-  for (let i = 0; i < 6; i++) {
-    setTimeout(() => particles.sparkle(cx, cy), i * 100);
+async function initAchievements() {
+  if (window.electronAPI) {
+    const saved = await window.electronAPI.loadAchievements();
+    if (saved) achievements.load(saved);
   }
-  sound.play('happy');
-  // 自动保存
-  saveAchievements();
-};
 
-achievements.onAccessoryChange = () => {
-  renderAccessories();
-  saveAchievements();
-};
+  // 成就解锁监听
+  achievements.on((type, data) => {
+    if (type === 'achievement') {
+      showBubble(`🏆 解锁成就：${data.icon} ${data.name}`, 4000);
+      setState('happy', 4000);
+      const rect = cat.getBoundingClientRect();
+      const container = document.getElementById('cat-container').getBoundingClientRect();
+      particles.sparkle(rect.left - container.left + rect.width / 2, rect.top - container.top);
+      if (data.reward) {
+        setTimeout(() => {
+          showBubble(`获得新装扮：${data.icon} ${data.name}！`, 3000);
+        }, 4500);
+      }
+    }
+    if (type === 'equip' || type === 'unequip') {
+      renderAccessories();
+    }
+    saveAchievements();
+  });
 
-// 保存成就数据
-async function saveAchievements() {
-  if (window.electronAPI && window.electronAPI.saveAchievements) {
-    await window.electronAPI.saveAchievements(achievements.save());
+  // 每分钟保存一次
+  setInterval(() => saveAchievements(), 60000);
+
+  // 检查时间段成就
+  achievements.recordTimeOfDay(new Date().getHours());
+}
+
+function saveAchievements() {
+  if (window.electronAPI) {
+    window.electronAPI.saveAchievements(achievements.toJSON());
   }
 }
 
@@ -299,7 +302,7 @@ function renderAccessories() {
   const layer = document.getElementById('accessory-layer');
   if (!layer) return;
   layer.innerHTML = '';
-  const equipped = achievements.getEquippedAccessories();
+  const equipped = achievements.getEquipped();
   equipped.forEach(acc => {
     const el = document.createElement('div');
     el.className = `accessory slot-${acc.slot}`;
@@ -307,19 +310,6 @@ function renderAccessories() {
     el.title = acc.name;
     layer.appendChild(el);
   });
-}
-
-// 加载成就数据
-async function loadAchievements() {
-  if (window.electronAPI && window.electronAPI.loadAchievements) {
-    const data = await window.electronAPI.loadAchievements();
-    if (data) {
-      achievements.load(data);
-      renderAccessories();
-    }
-  }
-  // 检查时间类成就
-  achievements.checkTimeAchievements();
 }
 
 // ============================================
@@ -560,9 +550,10 @@ function playClick(zone) {
     // 头部：开心摸头
     particles.heart(cx, cy + 10);
     sound.play('click');
+    totalPetCount++;
     achievements.recordPet();
     // 彩蛋 E7：摸头 100 次
-    if (achievements.progress.pet_count === 100 && checkEasterEgg('pet100')) {
+    if (totalPetCount === 100 && checkEasterEgg('pet100')) {
       setTimeout(() => {
         showBubble('你真的好喜欢我呢~ 💕', 4000);
         particles.sparkle(cx, cy);
@@ -625,10 +616,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 设置初始状态
   await setThemeState('idle');
 
-  // 加载成就数据
-  await loadAchievements();
-
   initDrag();
+  await initAchievements();
+  renderAccessories();
 
   // 监听 Claude Code 状态变化
   if (window.electronAPI) {
@@ -639,9 +629,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 记录通知历史
       addHistory(state, detail, project);
 
-      // 成就系统：记录任务
-      if (state === 'happy') achievements.recordTask(true);
-      else if (state === 'error') achievements.recordTask(false);
+      // 记录成就进度
+      if (state === 'happy') achievements.recordTask(false);
+      else if (state === 'error') achievements.recordTask(true);
 
       // 根据状态设置持续时间
       let duration = null;
@@ -801,6 +791,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 环境感知：节日彩蛋（启动 3 秒后）
   const holiday = getHoliday();
   if (holiday && checkEasterEgg('holiday')) {
+    achievements.recordHoliday();
     setTimeout(() => {
       showBubble(holiday.msg, 5000);
       setState('happy', 5000);
