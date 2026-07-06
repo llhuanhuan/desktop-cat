@@ -44,6 +44,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('set-ignore-mouse', ignore);
   },
 
+  // 成就系统数据
+  saveAchievements: (data) => ipcRenderer.invoke('save-achievements', data),
+  loadAchievements: () => ipcRenderer.invoke('load-achievements'),
+
+  // 成就解锁通知（主进程 -> 渲染进程）
+  onAchievementUnlocked: (callback) => {
+    ipcRenderer.on('achievement-unlocked', (event, data) => callback(data));
+  },
+
   // 精确清理监听器（按 channel）
   removeStateChangeListener: () => {
     ipcRenderer.removeAllListeners('state-change');

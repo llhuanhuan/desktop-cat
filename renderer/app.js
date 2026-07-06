@@ -12,6 +12,64 @@ let imageCache = {};      // { state: { blob, url } }
 // 免打扰模式
 let dndMode = false;
 
+// 互动系统 - 点击计数
+let clickCount = 0;
+let clickResetTimer = null;
+let longPressTimer = null;
+let isLongPress = false;
+
+// 猫爪印系统
+let lastPawTime = 0;
+const PAW_INTERVAL = 300;
+const PAW_LIFETIME = 3000;
+
+// 互动累计（使用 achievements.progress.pet_count，此处仅作兼容回退）
+
+// 彩蛋系统
+const EASTER_EGG_LOG = {};
+let consecutiveSuccessCount = 0;
+
+// 环境感知 - 空闲检测
+let lastActivityTime = Date.now();
+const IDLE_THRESHOLD = 5 * 60 * 1000;
+
+// 时间感知
+function getTimeContext() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 9)   return { period: 'morning',   msgs: ['早安喵~ ☀️', '新的一天开始啦~', '早安，今天也要加油！'] };
+  if (hour >= 9 && hour < 12)  return { period: 'forenoon',  msgs: ['上午好！', '写代码的好时光~', '加油加油！'] };
+  if (hour >= 12 && hour < 14) return { period: 'noon',      msgs: ['该吃饭了！🍱', '别忘了吃午饭哦~', '饿了喵...'] };
+  if (hour >= 14 && hour < 18) return { period: 'afternoon', msgs: ['下午继续~', '喝杯咖啡？☕', '下午茶时间~'] };
+  if (hour >= 18 && hour < 21) return { period: 'evening',   msgs: ['晚上好~🌅', '辛苦了一天啦', '晚饭吃啥？'] };
+  if (hour >= 21 || hour < 1)  return { period: 'night',     msgs: ['夜深了...🌙', '早点休息哦~', '夜晚是灵感时间✨'] };
+  return { period: 'late_night', msgs: ['还不睡觉！🦉', '熬夜会长黑眼圈的！', '喵...你不困我困了'] };
+}
+
+// 节日检测
+function getHoliday() {
+  const now = new Date();
+  const m = now.getMonth() + 1, d = now.getDate();
+  if (m === 1 && d === 1)   return { msg: '新年快乐！🎉🎊✨' };
+  if (m === 2 && d === 14)  return { msg: '情人节快乐~ 💕🐱' };
+  if (m === 10 && d >= 1 && d <= 7) return { msg: '国庆节快乐！🇨🇳🎉' };
+  if (m === 12 && d === 25) return { msg: 'Merry Christmas! 🎄🎁' };
+  if ((m === 1 && d >= 20) || (m === 2 && d <= 20)) return { msg: '新年快乐！恭喜发财~ 🧧🎆' };
+  return null;
+}
+
+// 彩蛋防重复
+function checkEasterEgg(id) {
+  const today = new Date().toDateString();
+  if (EASTER_EGG_LOG[id] === today) return false;
+  EASTER_EGG_LOG[id] = today;
+  return true;
+}
+
+// 空闲检测
+function isUserIdle() {
+  return Date.now() - lastActivityTime > IDLE_THRESHOLD;
+}
+
 // 通知历史（最近 50 条）
 const MAX_HISTORY = 50;
 const notificationHistory = [];
@@ -28,8 +86,15 @@ const THEME_MAP = {
   waking: 'assets/cat/processed/waking.png'
 };
 
+// 清理乱码：移除控制字符和替换字符
+function sanitizeText(text) {
+  if (!text) return '';
+  return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFD]/g, '').trim();
+}
+
 // 状态对应的气泡消息
 const STATE_MESSAGES = {
+  idle:     ['...', '喵~', '😊', '🤔', '好无聊啊~', '你在干嘛？'],
   thinking: ['思考中...', '让我想想...', '嗯...'],
   working: ['干活中...', '写代码中...', '马上就好...'],
   error: ['出错了！', '遇到了问题...', '需要帮忙...'],
@@ -85,7 +150,18 @@ async function setThemeState(state) {
   const url = await loadTheme(state);
   if (url && svgWrapper) {
     svgWrapper.innerHTML = `<img src="${url}" alt="${state}" style="width:100%;height:100%;object-fit:contain;border:none;outline:none;">`;
+    // 更新状态专属 CSS 类
+    svgWrapper.className = `cat-svg-wrapper state-${state}`;
   }
+}
+
+// 带过渡动画的状态切换
+function setThemeStateWithTransition(state) {
+  svgWrapper.classList.add('transitioning');
+  setTimeout(() => {
+    setThemeState(state);
+    svgWrapper.classList.remove('transitioning');
+  }, 200);
 }
 
 // 释放所有 Blob URL（应用退出前调用）
@@ -179,6 +255,74 @@ const sound = {
 sound.init();
 
 // ============================================
+// 成就系统初始化
+// ============================================
+const achievements = new AchievementSystem();
+
+// 成就解锁回调
+achievements.onUnlock = (achievement) => {
+  console.log(`[Desktop Cat] Achievement unlocked: ${achievement.name}`);
+  // Toast 通知
+  const container = document.getElementById('cat-container');
+  const toast = document.createElement('div');
+  toast.className = 'achievement-toast';
+  toast.textContent = `${achievement.icon} 解锁成就: ${achievement.name}`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+  // 特效
+  const rect = cat.getBoundingClientRect();
+  const cRect = container.getBoundingClientRect();
+  const cx = rect.left - cRect.left + rect.width / 2;
+  const cy = rect.top - cRect.top;
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => particles.sparkle(cx, cy), i * 100);
+  }
+  sound.play('happy');
+  // 自动保存
+  saveAchievements();
+};
+
+achievements.onAccessoryChange = () => {
+  renderAccessories();
+  saveAchievements();
+};
+
+// 保存成就数据
+async function saveAchievements() {
+  if (window.electronAPI && window.electronAPI.saveAchievements) {
+    await window.electronAPI.saveAchievements(achievements.save());
+  }
+}
+
+// 渲染配件
+function renderAccessories() {
+  const layer = document.getElementById('accessory-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const equipped = achievements.getEquippedAccessories();
+  equipped.forEach(acc => {
+    const el = document.createElement('div');
+    el.className = `accessory slot-${acc.slot}`;
+    el.textContent = acc.emoji;
+    el.title = acc.name;
+    layer.appendChild(el);
+  });
+}
+
+// 加载成就数据
+async function loadAchievements() {
+  if (window.electronAPI && window.electronAPI.loadAchievements) {
+    const data = await window.electronAPI.loadAchievements();
+    if (data) {
+      achievements.load(data);
+      renderAccessories();
+    }
+  }
+  // 检查时间类成就
+  achievements.checkTimeAchievements();
+}
+
+// ============================================
 // 粒子效果
 // ============================================
 const particles = {
@@ -243,12 +387,29 @@ function setState(state, duration) {
   currentState = state;
 
   // 切换主题动画
-  setThemeState(state);
+  setThemeStateWithTransition(state);
 
   // 状态变化时的音效
   if (state !== prevState) {
     if (state === 'happy') sound.play('happy');
     else if (state === 'sleeping') sound.play('sleep');
+  }
+
+  // 彩蛋 E4：连续成功计数
+  if (state === 'happy') {
+    consecutiveSuccessCount++;
+    if (consecutiveSuccessCount >= 10 && checkEasterEgg('streak10')) {
+      showBubble('🎆 完美连击！连续 10 次成功！', 5000);
+      const rect = cat.getBoundingClientRect();
+      const container = document.getElementById('cat-container').getBoundingClientRect();
+      const cx = rect.left - container.left + rect.width / 2;
+      const cy = rect.top - container.top;
+      for (let i = 0; i < 12; i++) {
+        setTimeout(() => particles.sparkle(cx, cy), i * 100);
+      }
+    }
+  } else if (state === 'error') {
+    consecutiveSuccessCount = 0;
   }
 
   if (duration) {
@@ -293,6 +454,12 @@ function showBubble(text, duration = 2000) {
 // ============================================
 // 点击穿透控制
 // ============================================
+function getClickZone(e) {
+  const rect = cat.getBoundingClientRect();
+  const relY = (e.clientY - rect.top) / rect.height;
+  return relY < 0.5 ? 'head' : 'body';
+}
+
 function enableClickThrough() {
   if (window.electronAPI) {
     window.electronAPI.setIgnoreMouse(true);
@@ -346,6 +513,25 @@ function initDrag() {
 // ============================================
 // 交互
 // ============================================
+function playAngry() {
+  setState('error', 3000);
+  sound.play('error');
+  showBubble('哼！不理你了！😤', 3000);
+  cat.classList.add('angry-shake');
+  setTimeout(() => cat.classList.remove('angry-shake'), 600);
+}
+
+function createPawPrint(x, y) {
+  const paw = document.createElement('div');
+  paw.className = 'paw-print';
+  paw.textContent = '🐾';
+  paw.style.left = `${x}px`;
+  paw.style.top = `${y}px`;
+  paw.style.transform = `rotate(${(Math.random() - 0.5) * 30}deg)`;
+  document.getElementById('cat-container').appendChild(paw);
+  setTimeout(() => paw.remove(), PAW_LIFETIME);
+}
+
 function playTaskDone() {
   setState('happy', 3000);
 
@@ -361,19 +547,39 @@ function playTaskDone() {
   showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
 }
 
-function playClick() {
+function playClick(zone) {
   cat.classList.add('click');
   setTimeout(() => cat.classList.remove('click'), 400);
 
   const rect = cat.getBoundingClientRect();
   const container = document.getElementById('cat-container').getBoundingClientRect();
-  particles.heart(
-    rect.left - container.left + rect.width / 2,
-    rect.top - container.top + 10
-  );
+  const cx = rect.left - container.left + rect.width / 2;
+  const cy = rect.top - container.top;
 
-  const msgs = ['喵~ 🐱', '摸摸头~', '呼噜~', '蹭蹭~', '喜欢你！', '嘿嘿~'];
-  showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
+  if (zone === 'head') {
+    // 头部：开心摸头
+    particles.heart(cx, cy + 10);
+    sound.play('click');
+    achievements.recordPet();
+    // 彩蛋 E7：摸头 100 次
+    if (achievements.progress.pet_count === 100 && checkEasterEgg('pet100')) {
+      setTimeout(() => {
+        showBubble('你真的好喜欢我呢~ 💕', 4000);
+        particles.sparkle(cx, cy);
+        setState('happy', 4000);
+      }, 500);
+    }
+    const msgs = ['喵~ 🐱', '摸摸头~', '呼噜~', '蹭蹭~', '喜欢你！', '嘿嘿~'];
+    showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
+  } else {
+    // 身体：伸懒腰
+    cat.classList.add('stretch');
+    setTimeout(() => cat.classList.remove('stretch'), 600);
+    particles.star(cx, cy);
+    sound.play('meow');
+    const msgs = ['伸懒腰~ 😸', '嗯~别碰肚子！', '嘻嘻~好痒'];
+    showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
+  }
 }
 
 function playHover() {
@@ -419,6 +625,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 设置初始状态
   await setThemeState('idle');
 
+  // 加载成就数据
+  await loadAchievements();
+
   initDrag();
 
   // 监听 Claude Code 状态变化
@@ -429,6 +638,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 记录通知历史
       addHistory(state, detail, project);
+
+      // 成就系统：记录任务
+      if (state === 'happy') achievements.recordTask(true);
+      else if (state === 'error') achievements.recordTask(false);
 
       // 根据状态设置持续时间
       let duration = null;
@@ -447,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           let text = '';
           if (project) text += `[${project}] `;
           text += msg;
-          if (detail) text += `: ${detail}`;
+          if (detail) text += `: ${sanitizeText(detail)}`;
           showBubble(text, state === 'happy' ? 5000 : 3000);
         }
       }
@@ -479,22 +692,81 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 点击事件
-  cat.addEventListener('click', () => {
-    if (!isDragging) playClick();
+  cat.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isLongPress = false;
+    // 记录按下时间（用于液体猫彩蛋检测）
+    const pressStartTime = Date.now();
+    longPressTimer = setTimeout(() => {
+      isLongPress = true;
+      // 检查是否已按住 5 秒（液体猫彩蛋）
+      const held = Date.now() - pressStartTime;
+      if (held >= 5000 && checkEasterEgg('liquid')) {
+        cat.classList.add('liquid-cat');
+        sound.play('meow');
+        showBubble('我是液体的... 🫠', 3000);
+        setTimeout(() => cat.classList.remove('liquid-cat'), 3000);
+      } else if (currentState !== 'sleeping') {
+        setState('sleeping');
+        sound.play('sleep');
+        showBubble('呼噜... 💤');
+      }
+    }, 1500);
+  });
+
+  cat.addEventListener('mouseup', () => {
+    clearTimeout(longPressTimer);
+  });
+
+  cat.addEventListener('click', (e) => {
+    if (isDragging || isLongPress) return;
+
+    clickCount++;
+    clearTimeout(clickResetTimer);
+    clickResetTimer = setTimeout(() => { clickCount = 0; }, 5000);
+
+    if (clickCount >= 7) {
+      playAngry();
+      clickCount = 0;
+    } else if (clickCount >= 4) {
+      showBubble('别摸了啦... >_<');
+      sound.play('meow');
+    } else {
+      const zone = getClickZone(e);
+      playClick(zone);
+    }
   });
 
   // 双击切换睡眠
   cat.addEventListener('dblclick', (e) => {
-    if (!isDragging) {
+    if (!isDragging && !isLongPress) {
       e.preventDefault();
-      toggleSleep();
+      // 彩蛋 E2：10% 概率翻肚皮
+      if (Math.random() < 0.10 && checkEasterEgg('belly')) {
+        cat.classList.add('belly-flop');
+        sound.play('happy');
+        showBubble('给你看肚皮~ 🥰', 3000);
+        achievements.recordEasterEgg('belly');
+        const rect = cat.getBoundingClientRect();
+        const container = document.getElementById('cat-container').getBoundingClientRect();
+        const cx = rect.left - container.left + rect.width / 2;
+        const cy = rect.top - container.top;
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => particles.sparkle(cx, cy), i * 150);
+        }
+        setTimeout(() => cat.classList.remove('belly-flop'), 2000);
+      } else {
+        toggleSleep();
+      }
     }
   });
 
   // 悬停：禁用穿透 + 显示气泡
   cat.addEventListener('mouseenter', () => {
     disableClickThrough();
-    if (!isDragging && currentState !== 'sleeping') playHover();
+    if (!isDragging) {
+      if (currentState !== 'sleeping') playHover();
+    }
   });
 
   // 离开：恢复穿透
@@ -505,6 +777,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // 猫爪印：在猫身上移动鼠标时生成
+  cat.addEventListener('mousemove', (e) => {
+    const now = Date.now();
+    if (now - lastPawTime < PAW_INTERVAL) return;
+    if (currentState === 'sleeping') return;
+    lastPawTime = now;
+    lastActivityTime = now;
+
+    const container = document.getElementById('cat-container').getBoundingClientRect();
+    const x = e.clientX - container.left + (Math.random() - 0.5) * 20;
+    const y = e.clientY - container.top + (Math.random() - 0.5) * 20;
+    createPawPrint(x, y);
+  });
+
   // 右键切换音效
   cat.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -512,18 +798,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
 
+  // 环境感知：节日彩蛋（启动 3 秒后）
+  const holiday = getHoliday();
+  if (holiday && checkEasterEgg('holiday')) {
+    setTimeout(() => {
+      showBubble(holiday.msg, 5000);
+      setState('happy', 5000);
+    }, 3000);
+  }
+
   // 随机动作（空闲时，DND 模式下跳过）
   setInterval(() => {
     if (dndMode) return;
+
+    // 空闲检测：5 分钟无活动
+    if (isUserIdle() && currentState === 'idle' && Math.random() < 0.3) {
+      const idleActions = [
+        () => { setState('sleeping', 8000); showBubble('好无聊...先睡一会~ 😴'); },
+        () => { showBubble('你在吗？喵~ 🐱'); },
+        () => { setState('thinking', 3000); showBubble('自己玩一会儿~ 🧶'); }
+      ];
+      idleActions[Math.floor(Math.random() * idleActions.length)]();
+      return;
+    }
+
     if (currentState === 'idle' && Math.random() < 0.25) {
       const rect = cat.getBoundingClientRect();
       const container = document.getElementById('cat-container').getBoundingClientRect();
-      particles.star(
-        rect.left - container.left + rect.width / 2,
-        rect.top - container.top
-      );
-      const msgs = ['...', '喵~', '🤔', '😊'];
-      showBubble(msgs[Math.floor(Math.random() * msgs.length)], 1200);
+      const cx = rect.left - container.left + rect.width / 2;
+      const cy = rect.top - container.top;
+
+      // 环境粒子：白天闪烁，夜晚星星
+      const hour = new Date().getHours();
+      if (hour >= 6 && hour < 18 && Math.random() < 0.3) {
+        particles.sparkle(cx, cy);
+      } else {
+        particles.star(cx, cy);
+      }
+
+      // 时间感知的随机气泡
+      const ctx = getTimeContext();
+      const allMsgs = ['...', '喵~', '🤔', '😊', ...ctx.msgs];
+      showBubble(allMsgs[Math.floor(Math.random() * allMsgs.length)], 1200);
     }
   }, 15000);
 
@@ -532,5 +848,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     revokeAllBlobURLs();
   });
 
-  console.log('[Desktop Cat] Initialized with 8 states + click-through');
+  // 全局活动追踪（空闲检测）
+  document.addEventListener('mousemove', () => { lastActivityTime = Date.now(); });
+  document.addEventListener('keydown', () => { lastActivityTime = Date.now(); });
+
+  console.log('[Desktop Cat] Initialized with 8 states + click-through + easter eggs + environment awareness');
 });

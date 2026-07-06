@@ -42,20 +42,29 @@ const STATE_MAP = {
 
 async function readStdin() {
   return new Promise((resolve) => {
-    let data = '';
-    const timeout = setTimeout(() => resolve(data), TIMEOUT_MS);
+    let chunks = [];
+    const timeout = setTimeout(() => resolve(Buffer.concat(chunks).toString('utf8')), TIMEOUT_MS);
 
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk) => { data += chunk; });
+    process.stdin.on('data', (chunk) => { chunks.push(Buffer.from(chunk)); });
     process.stdin.on('end', () => {
       clearTimeout(timeout);
-      resolve(data);
+      resolve(Buffer.concat(chunks).toString('utf8'));
     });
     process.stdin.on('error', () => {
       clearTimeout(timeout);
-      resolve(data);
+      resolve(Buffer.concat(chunks).toString('utf8'));
     });
   });
+}
+
+// 清理乱码：移除非 printable 字符，保留中文、日韩、emoji 等
+function sanitizeText(text) {
+  if (!text) return '';
+  // 保留可打印 ASCII、中文(CJK)、日韩、emoji、常用标点
+  return String(text)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 移除控制字符（保留 \t \n \r）
+    .replace(/[\uFFFD]/g, '') // 移除 Unicode 替换字符
+    .trim();
 }
 
 function postState(state, eventName, detail, project, attempt = 1) {
@@ -123,13 +132,13 @@ async function main() {
     const data = JSON.parse(stdinData);
 
     if (data.tool_name) {
-      detail = data.tool_name;
+      detail = sanitizeText(data.tool_name);
     } else if (data.message) {
-      detail = String(data.message).slice(0, 80);
+      detail = sanitizeText(String(data.message).slice(0, 80));
     } else if (data.summary) {
-      detail = String(data.summary).slice(0, 80);
+      detail = sanitizeText(String(data.summary).slice(0, 80));
     } else if (data.content) {
-      detail = String(data.content).slice(0, 80);
+      detail = sanitizeText(String(data.content).slice(0, 80));
     }
 
     if (data.cwd) {

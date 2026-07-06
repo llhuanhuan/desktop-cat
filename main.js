@@ -371,6 +371,30 @@ ipcMain.on('set-ignore-mouse', (event, ignore) => {
   }
 });
 
+// 成就系统持久化
+const ACHIEVEMENTS_FILE = path.join(path.join(os.homedir(), '.desktop-cat'), 'achievements.json');
+
+ipcMain.handle('save-achievements', async (event, data) => {
+  try {
+    fs.writeFileSync(ACHIEVEMENTS_FILE, JSON.stringify(data, null, 2), 'utf8');
+    return { success: true };
+  } catch (e) {
+    console.error('[Desktop Cat] Failed to save achievements:', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('load-achievements', async () => {
+  try {
+    if (fs.existsSync(ACHIEVEMENTS_FILE)) {
+      return JSON.parse(fs.readFileSync(ACHIEVEMENTS_FILE, 'utf8'));
+    }
+  } catch (e) {
+    console.error('[Desktop Cat] Failed to load achievements:', e.message);
+  }
+  return null;
+});
+
 // 接收历史数据（用于 dialog 显示）
 ipcMain.on('show-history-dialog', (event, history) => {
   if (!history || history.length === 0) {
