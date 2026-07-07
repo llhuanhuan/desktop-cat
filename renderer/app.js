@@ -150,8 +150,12 @@ async function loadTheme(state) {
 async function setThemeState(state) {
   const url = await loadTheme(state);
   if (url && svgWrapper) {
-    svgWrapper.innerHTML = `<img src="${url}" alt="${state}" style="width:100%;height:100%;object-fit:contain;border:none;outline:none;">`;
-    // 更新状态专属 CSS 类
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = state;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border:none;outline:none;';
+    svgWrapper.innerHTML = '';
+    svgWrapper.appendChild(img);
     svgWrapper.className = `cat-svg-wrapper state-${state}`;
   }
 }
@@ -787,6 +791,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enabled = sound.toggle();
     showBubble(enabled ? '🔊 音效开' : '🔇 音效关', 1500);
   });
+
+  // 彩蛋 E3：凌晨0点触发
+  const now = new Date();
+  if (now.getHours() === 0 && now.getMinutes() === 0 && checkEasterEgg('midnight')) {
+    setTimeout(() => {
+      showBubble('新的一天喵~ 🌙✨', 5000);
+      setState('happy', 5000);
+    }, 1000);
+  }
 
   // 环境感知：节日彩蛋（启动 3 秒后）
   const holiday = getHoliday();

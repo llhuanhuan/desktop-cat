@@ -80,6 +80,27 @@ function createMainWindow() {
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
 
+  // 启动时检测：如果窗口位置在已断开的显示器上，重置到主屏幕
+  const { screen } = require('electron');
+  const displays = screen.getAllDisplays();
+  if (config.x !== undefined && config.y !== undefined) {
+    let onScreen = false;
+    for (const d of displays) {
+      if (config.x + 150 >= d.bounds.x && config.x + 150 <= d.bounds.x + d.bounds.width &&
+          config.y + 150 >= d.bounds.y && config.y + 150 <= d.bounds.y + d.bounds.height) {
+        onScreen = true;
+        break;
+      }
+    }
+    if (!onScreen) {
+      const newX = displays[0].bounds.x + 100;
+      const newY = displays[0].bounds.y + 100;
+      mainWindow.setPosition(newX, newY);
+      saveConfig({ x: newX, y: newY });
+      console.log('[Desktop Cat] Saved position off screen, reset to primary display');
+    }
+  }
+
   // 默认开启点击穿透
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
@@ -93,36 +114,7 @@ function createMainWindow() {
   mainWindow.on('move', () => {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
-
-      // 边界检测 - 使用 getDisplayMatching 找最近的显示器
-      const { screen } = require('electron');
-      const bounds = { x, y, width: 300, height: 300 };
-      const matched = screen.getDisplayMatching(bounds);
-      
-      // 只有当窗口完全离开所有显示器时才重置
-      // getDisplayMatching 返回最匹配的显示器，即使有间隙也不会误判
-      const displays = screen.getAllDisplays();
-      let isFullyOffScreen = true;
-
-      for (const display of displays) {
-        const { x: dx, y: dy, width, height } = display.bounds;
-        // 只要窗口有任何部分在显示器范围内就算可见
-        if (x + 300 > dx && x < dx + width && y + 300 > dy && y < dy + height) {
-          isFullyOffScreen = false;
-          break;
-        }
-      }
-
-      if (isFullyOffScreen && displays.length > 0) {
-        const primaryDisplay = displays[0];
-        const newX = primaryDisplay.bounds.x + 100;
-        const newY = primaryDisplay.bounds.y + 100;
-        mainWindow.setPosition(newX, newY);
-        saveConfig({ x: newX, y: newY });
-        console.log('[Desktop Cat] Window fully off screen, reset to primary display');
-      } else {
-        saveConfig({ x, y });
-      }
+      saveConfig({ x, y });
     }
   });
 }
@@ -262,7 +254,8 @@ function startNotificationServer() {
         try {
           const data = JSON.parse(body);
           const { state, event, detail, project } = data;
-          if (state) {
+          const VALID_STATES = ['idle','happy','sleeping','thinking','working','error','notification','waking'];
+          if (state && VALID_STATES.includes(state)) {
             notifyStateChange(state, event, detail, project);
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });

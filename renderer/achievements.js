@@ -16,6 +16,7 @@ const ACHIEVEMENTS = {
 
   // 互动类
   pet_50:       { name: '猫咪挚友',   desc: '摸猫咪 50 次',          icon: '🤗', reward: 'bow_blue' },
+  pet_100:      { name: '猫咪恋人',   desc: '摸猫咪 100 次',         icon: '💖', reward: 'hat_wizard' },
   pet_200:      { name: '猫咪灵魂伴侣', desc: '摸猫咪 200 次',       icon: '💕', reward: 'bell' },
   night_owl:    { name: '夜猫子',     desc: '凌晨 2 点还在写代码',    icon: '🦉', reward: 'coffee' },
   early_bird:   { name: '早起的鸟儿', desc: '早上 6 点就开始写代码',  icon: '🐦', reward: 'fish' },
@@ -54,19 +55,34 @@ class AchievementSystem {
     this._listeners = [];
   }
 
-  // 加载持久化数据
+  // 加载持久化数据（含旧格式迁移）
   load(savedData) {
-    if (savedData) {
-      this.data = {
-        ...this.data,
-        ...savedData,
-        progress: { ...this.data.progress, ...(savedData.progress || {}) },
-        accessories: { ...this.data.accessories, ...(savedData.accessories || {}) }
-      };
+    if (!savedData) return;
+
+    // 旧格式迁移（必须在合并前完成）
+    if (savedData.equipped) {
+      savedData.accessories = savedData.accessories || {};
+      savedData.accessories.equipped = { ...savedData.equipped, ...(savedData.accessories.equipped || {}) };
+      delete savedData.equipped;
     }
-    // 检查连续使用天数
+
+    this.data = {
+      ...this.data,
+      ...savedData,
+      progress: { ...this.data.progress, ...(savedData.progress || {}) },
+      accessories: { ...this.data.accessories, ...(savedData.accessories || {}) }
+    };
+
+    // 清理孤儿数据
+    this.data.unlocked = this.data.unlocked.filter(id => ACHIEVEMENTS[id]);
+    if (this.data.accessories) {
+      this.data.accessories.unlocked = (this.data.accessories.unlocked || []).filter(id => ACCESSORIES[id]);
+      for (const [slot, id] of Object.entries(this.data.accessories.equipped || {})) {
+        if (!ACCESSORIES[id]) delete this.data.accessories.equipped[slot];
+      }
+    }
+
     this._checkStreak();
-    // 检查首次使用成就
     this.check('first_day');
   }
 
@@ -112,7 +128,13 @@ class AchievementSystem {
   recordPet() {
     this.data.progress.pet_count++;
     if (this.data.progress.pet_count >= 50) this.check('pet_50');
+    if (this.data.progress.pet_count >= 100) this.check('pet_100');
     if (this.data.progress.pet_count >= 200) this.check('pet_200');
+  }
+
+  // 记录彩蛋触发
+  recordEasterEgg(id) {
+    if (id === 'belly') this.check('pet_100'); // belly_rub 无对应成就，用 pet_100 替代
   }
 
   // 记录时间段使用
