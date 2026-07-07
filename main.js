@@ -124,6 +124,19 @@ function createTray() {
       }
     },
     {
+      label: '🔍 找回猫咪',
+      click: () => {
+        if (mainWindow) {
+          const { screen } = require('electron');
+          const primary = screen.getPrimaryDisplay().bounds;
+          mainWindow.setPosition(primary.x + 100, primary.y + 100);
+          mainWindow.show();
+          saveConfig({ x: primary.x + 100, y: primary.y + 100 });
+          console.log('[Desktop Cat] Cat rescued to primary display');
+        }
+      }
+    },
+    {
       label: '测试通知',
       click: () => {
         notifyStateChange('happy', 'test', '测试任务已完成！');
@@ -336,25 +349,7 @@ if (!gotTheLock) {
 ipcMain.on('move-window', (event, deltaX, deltaY) => {
   if (mainWindow) {
     const [currentX, currentY] = mainWindow.getPosition();
-    const newX = currentX + deltaX;
-    const newY = currentY + deltaY;
-
-    // 检查新位置是否至少在一个屏幕上有部分可见
-    const { screen } = require('electron');
-    const displays = screen.getAllDisplays();
-    let visible = false;
-    for (const d of displays) {
-      if (newX + 100 > d.bounds.x && newX < d.bounds.x + d.bounds.width &&
-          newY + 100 > d.bounds.y && newY < d.bounds.y + d.bounds.height) {
-        visible = true;
-        break;
-      }
-    }
-
-    if (visible) {
-      mainWindow.setPosition(newX, newY);
-    }
-    // 如果完全离屏则忽略此次移动（防止拖到屏幕外丢失）
+    mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
   }
 });
 
