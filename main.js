@@ -68,7 +68,8 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
-    }
+    },
+    movable: true
   };
 
   // 恢复上次位置
@@ -80,7 +81,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
 
-  // 默认开启点击穿透
+  // 默认开启点击穿透（透明区域可穿透点击）
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   // 主窗口关闭时退出应用
@@ -346,6 +347,7 @@ if (!gotTheLock) {
 // ============================================
 // IPC 通信
 // ============================================
+// 窗口移动（无边界限制，自由跨屏）
 ipcMain.on('move-window', (event, deltaX, deltaY) => {
   if (mainWindow) {
     const [currentX, currentY] = mainWindow.getPosition();

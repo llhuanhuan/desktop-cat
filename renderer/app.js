@@ -467,7 +467,7 @@ function disableClickThrough() {
 }
 
 // ============================================
-// 拖拽
+// 拖拽（手动拖动，无边界限制，可自由跨屏）
 // ============================================
 function initDrag() {
   const container = document.getElementById('cat-container');
