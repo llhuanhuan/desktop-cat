@@ -81,23 +81,20 @@ function createMainWindow() {
   mainWindow.loadFile('renderer/index.html');
 
   // 启动时检测：如果窗口位置在已断开的显示器上，重置到主屏幕
-  const { screen } = require('electron');
-  const displays = screen.getAllDisplays();
   if (config.x !== undefined && config.y !== undefined) {
-    let onScreen = false;
-    for (const d of displays) {
-      if (config.x + 150 >= d.bounds.x && config.x + 150 <= d.bounds.x + d.bounds.width &&
-          config.y + 150 >= d.bounds.y && config.y + 150 <= d.bounds.y + d.bounds.height) {
-        onScreen = true;
-        break;
-      }
-    }
-    if (!onScreen) {
-      const newX = displays[0].bounds.x + 100;
-      const newY = displays[0].bounds.y + 100;
-      mainWindow.setPosition(newX, newY);
-      saveConfig({ x: newX, y: newY });
-      console.log('[Desktop Cat] Saved position off screen, reset to primary display');
+    const { screen } = require('electron');
+    const testBounds = { x: config.x, y: config.y, width: 300, height: 300 };
+    const matched = screen.getDisplayMatching(testBounds);
+    // getDisplayMatching 总是返回最匹配的显示器
+    // 只有当匹配到的显示器和窗口完全不重叠时才算"离屏"
+    const m = matched.bounds;
+    const offScreen = config.x + 300 < m.x || config.x > m.x + m.width ||
+                      config.y + 300 < m.y || config.y > m.y + m.height;
+    if (offScreen) {
+      const primary = screen.getPrimaryDisplay().bounds;
+      mainWindow.setPosition(primary.x + 100, primary.y + 100);
+      saveConfig({ x: primary.x + 100, y: primary.y + 100 });
+      console.log('[Desktop Cat] Position off screen, reset to primary');
     }
   }
 
