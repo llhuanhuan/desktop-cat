@@ -94,28 +94,32 @@ function createMainWindow() {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
 
-      // 边界检测
+      // 边界检测 - 使用 getDisplayMatching 找最近的显示器
       const { screen } = require('electron');
+      const bounds = { x, y, width: 300, height: 300 };
+      const matched = screen.getDisplayMatching(bounds);
+      
+      // 只有当窗口完全离开所有显示器时才重置
+      // getDisplayMatching 返回最匹配的显示器，即使有间隙也不会误判
       const displays = screen.getAllDisplays();
-      let isVisible = false;
+      let isFullyOffScreen = true;
 
       for (const display of displays) {
         const { x: dx, y: dy, width, height } = display.bounds;
-        const centerX = x + 150;
-        const centerY = y + 150;
-        if (centerX >= dx && centerX <= dx + width && centerY >= dy && centerY <= dy + height) {
-          isVisible = true;
+        // 只要窗口有任何部分在显示器范围内就算可见
+        if (x + 300 > dx && x < dx + width && y + 300 > dy && y < dy + height) {
+          isFullyOffScreen = false;
           break;
         }
       }
 
-      if (!isVisible && displays.length > 0) {
+      if (isFullyOffScreen && displays.length > 0) {
         const primaryDisplay = displays[0];
         const newX = primaryDisplay.bounds.x + 100;
         const newY = primaryDisplay.bounds.y + 100;
         mainWindow.setPosition(newX, newY);
         saveConfig({ x: newX, y: newY });
-        console.log('[Desktop Cat] Window out of bounds, reset to primary display');
+        console.log('[Desktop Cat] Window fully off screen, reset to primary display');
       } else {
         saveConfig({ x, y });
       }
