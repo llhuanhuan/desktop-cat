@@ -80,24 +80,6 @@ function createMainWindow() {
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
 
-  // 启动时检测：如果窗口位置在已断开的显示器上，重置到主屏幕
-  if (config.x !== undefined && config.y !== undefined) {
-    const { screen } = require('electron');
-    const testBounds = { x: config.x, y: config.y, width: 300, height: 300 };
-    const matched = screen.getDisplayMatching(testBounds);
-    // getDisplayMatching 总是返回最匹配的显示器
-    // 只有当匹配到的显示器和窗口完全不重叠时才算"离屏"
-    const m = matched.bounds;
-    const offScreen = config.x + 300 < m.x || config.x > m.x + m.width ||
-                      config.y + 300 < m.y || config.y > m.y + m.height;
-    if (offScreen) {
-      const primary = screen.getPrimaryDisplay().bounds;
-      mainWindow.setPosition(primary.x + 100, primary.y + 100);
-      saveConfig({ x: primary.x + 100, y: primary.y + 100 });
-      console.log('[Desktop Cat] Position off screen, reset to primary');
-    }
-  }
-
   // 默认开启点击穿透
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
@@ -354,7 +336,25 @@ if (!gotTheLock) {
 ipcMain.on('move-window', (event, deltaX, deltaY) => {
   if (mainWindow) {
     const [currentX, currentY] = mainWindow.getPosition();
-    mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+    const newX = currentX + deltaX;
+    const newY = currentY + deltaY;
+
+    // 检查新位置是否至少在一个屏幕上有部分可见
+    const { screen } = require('electron');
+    const displays = screen.getAllDisplays();
+    let visible = false;
+    for (const d of displays) {
+      if (newX + 100 > d.bounds.x && newX < d.bounds.x + d.bounds.width &&
+          newY + 100 > d.bounds.y && newY < d.bounds.y + d.bounds.height) {
+        visible = true;
+        break;
+      }
+    }
+
+    if (visible) {
+      mainWindow.setPosition(newX, newY);
+    }
+    // 如果完全离屏则忽略此次移动（防止拖到屏幕外丢失）
   }
 });
 
