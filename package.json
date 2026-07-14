@@ -39,7 +39,6 @@
     "build": {
         "appId": "com.llhuanhuan.desktop-cat",
         "productName": "Desktop Cat",
-        "electronDist": "node_modules/electron/dist",
         "directories": {
             "output": "dist"
         },
