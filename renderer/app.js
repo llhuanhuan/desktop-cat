@@ -648,7 +648,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 免打扰模式下不显示气泡，但仍然切换动画
       if (!dndMode) {
-        const msgs = STATE_MESSAGES[state];
+        let msgs = STATE_MESSAGES[state];
+
+        // 特殊处理：waking 状态使用时间感知的问候语
+        if (state === 'waking') {
+          const ctx = getTimeContext();
+          msgs = ctx.msgs;
+        }
+
         if (msgs) {
           const msg = msgs[Math.floor(Math.random() * msgs.length)];
           let text = '';
