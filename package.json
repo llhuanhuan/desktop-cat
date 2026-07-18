@@ -10,6 +10,9 @@
         "uninstall-hook": "node hooks/install.js uninstall",
         "build": "electron-builder --win portable",
         "build:win": "electron-builder --win",
+        "build:win:x64": "electron-builder --win --x64",
+        "build:win:ia32": "electron-builder --win --ia32",
+        "build:win:arm64": "electron-builder --win --arm64",
         "build:all": "electron-builder --win --mac --linux",
         "postinstall": "electron-builder install-app-deps"
     },
@@ -58,13 +61,17 @@
                 {
                     "target": "nsis",
                     "arch": [
-                        "x64"
+                        "x64",
+                        "ia32",
+                        "arm64"
                     ]
                 },
                 {
                     "target": "portable",
                     "arch": [
-                        "x64"
+                        "x64",
+                        "ia32",
+                        "arm64"
                     ]
                 }
             ],
@@ -75,8 +82,19 @@
             "allowToChangeInstallationDirectory": false,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
-            "shortcutName": "Desktop Cat"
+            "shortcutName": "Desktop Cat",
+            "include": "build/installer.nsh"
         },
+        "extraResources": [
+            {
+                "from": "build/vc_redist.x64.exe",
+                "to": "vc_redist.x64.exe"
+            },
+            {
+                "from": "build/vc_redist.x86.exe",
+                "to": "vc_redist.x86.exe"
+            }
+        ],
         "mac": {
             "target": "dmg",
             "icon": "renderer/assets/icon.png"

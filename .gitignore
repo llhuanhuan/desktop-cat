@@ -13,3 +13,6 @@ config.json
 Thumbs.db
 .qdrant-initialized
 storage/
+
+# 构建依赖（在 CI 中下载）
+build/vc_redist.*.exe
