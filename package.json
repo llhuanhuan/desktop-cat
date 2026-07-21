@@ -42,6 +42,7 @@
     "build": {
         "appId": "com.llhuanhuan.desktop-cat",
         "productName": "Desktop Cat",
+        "artifactName": "${productName}-${version}-${arch}.${ext}",
         "directories": {
             "output": "dist"
         },
