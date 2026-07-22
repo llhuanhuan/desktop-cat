@@ -10,7 +10,7 @@
  */
 
 const http = require('http');
-const { getConfig } = require('../shared-config');
+const { getConfig, sanitizeText } = require('../shared-config');
 
 const PORT = getConfig('port');
 const TIMEOUT_MS = 500;
@@ -55,16 +55,6 @@ async function readStdin() {
       resolve(Buffer.concat(chunks).toString('utf8'));
     });
   });
-}
-
-// 清理乱码：移除非 printable 字符，保留中文、日韩、emoji 等
-function sanitizeText(text) {
-  if (!text) return '';
-  // 保留可打印 ASCII、中文(CJK)、日韩、emoji、常用标点
-  return String(text)
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 移除控制字符（保留 \t \n \r）
-    .replace(/[\uFFFD]/g, '') // 移除 Unicode 替换字符
-    .trim();
 }
 
 function postState(state, eventName, detail, project, attempt = 1) {

@@ -6,7 +6,7 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
-const { getConfig, getAllConfig, loadConfig, saveConfig } = require('./shared-config');
+const { getConfig, getAllConfig, loadConfig, saveConfig, formatHistoryItem } = require('./shared-config');
 
 let mainWindow;
 let tray;
@@ -82,6 +82,13 @@ function createMainWindow() {
 
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile('renderer/index.html');
+
+  // 窗口加载完成后，同步 DND 状态到渲染进程
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('toggle-dnd', dndMode);
+    }
+  });
 
   // 默认开启点击穿透（透明区域可穿透点击）
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -311,7 +318,7 @@ function startNotificationServer() {
     }
   });
 
-  server.listen(PORT, () => {
+  server.listen(PORT, '127.0.0.1', () => {
     console.log(`[Desktop Cat] Notification server listening on port ${PORT}`);
   });
 
@@ -328,12 +335,16 @@ function startNotificationServer() {
 function stopNotificationServer() {
   return new Promise((resolve) => {
     if (!server) return resolve();
+    const forceTimer = setTimeout(() => {
+      // 强制销毁所有连接
+      server.close(() => resolve());
+      server = null;
+    }, 2000);
     server.close(() => {
+      clearTimeout(forceTimer);
       console.log('[Desktop Cat] HTTP server closed');
       resolve();
     });
-    // 超时强制关闭
-    setTimeout(resolve, 2000);
   });
 }
 
@@ -341,14 +352,17 @@ function stopNotificationServer() {
 // 自启动设置
 // ============================================
 function setAutoLaunch(enable) {
-  const execPath = process.execPath;
-  const appPath = app.getAppPath();
-
-  app.setLoginItemSettings({
-    openAtLogin: enable,
-    path: execPath,
-    args: [appPath]
-  });
+  if (app.isPackaged) {
+    // 生产模式：process.execPath 就是打包后的 exe 路径，无需额外 args
+    app.setLoginItemSettings({
+      openAtLogin: enable,
+      path: process.execPath
+    });
+  } else {
+    // 开发模式：不注册自启动（避免注册 electron.exe 路径）
+    console.log('[Desktop Cat] Skip auto-launch in dev mode');
+    return;
+  }
 
   console.log(`[Desktop Cat] Auto-launch ${enable ? 'enabled' : 'disabled'}`);
 }
@@ -376,7 +390,8 @@ if (!gotTheLock) {
 // ============================================
 // 窗口移动（无边界限制，自由跨屏）
 ipcMain.on('move-window', (event, deltaX, deltaY) => {
-  if (mainWindow) {
+  if (mainWindow && typeof deltaX === 'number' && typeof deltaY === 'number'
+      && isFinite(deltaX) && isFinite(deltaY)) {
     const [currentX, currentY] = mainWindow.getPosition();
     mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
   }
@@ -384,7 +399,7 @@ ipcMain.on('move-window', (event, deltaX, deltaY) => {
 
 // 点击穿透控制
 ipcMain.on('set-ignore-mouse', (event, ignore) => {
-  if (mainWindow) {
+  if (mainWindow && typeof ignore === 'boolean') {
     mainWindow.setIgnoreMouseEvents(ignore, { forward: true });
   }
 });
@@ -394,7 +409,14 @@ const ACHIEVEMENTS_FILE = path.join(path.join(os.homedir(), '.desktop-cat'), 'ac
 
 ipcMain.handle('save-achievements', async (event, data) => {
   try {
-    fs.writeFileSync(ACHIEVEMENTS_FILE, JSON.stringify(data, null, 2), 'utf8');
+    if (!data || typeof data !== 'object') {
+      return { success: false, error: 'Invalid data' };
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (json.length > 100 * 1024) {
+      return { success: false, error: 'Data too large' };
+    }
+    fs.writeFileSync(ACHIEVEMENTS_FILE, json, 'utf8');
     return { success: true };
   } catch (e) {
     console.error('[Desktop Cat] Failed to save achievements:', e.message);
@@ -425,8 +447,7 @@ ipcMain.on('show-history-dialog', (event, history) => {
   }
 
   const text = history.map((h, i) => {
-    const proj = h.project ? `[${h.project}] ` : '';
-    return `${i + 1}. ${h.time} ${proj}${h.detail || h.state}`;
+    return formatHistoryItem(h, i);
   }).join('\n');
 
   dialog.showMessageBox(mainWindow, {

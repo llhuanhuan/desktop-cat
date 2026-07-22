@@ -23,9 +23,6 @@ let lastPawTime = 0;
 const PAW_INTERVAL = 300;
 const PAW_LIFETIME = 3000;
 
-// 互动累计
-let totalPetCount = 0;
-
 // 彩蛋系统
 const EASTER_EGG_LOG = {};
 let consecutiveSuccessCount = 0;
@@ -128,8 +125,7 @@ function addHistory(state, detail, project) {
 function getHistoryText() {
   if (notificationHistory.length === 0) return '暂无通知记录';
   return notificationHistory.slice(0, 10).map((h, i) => {
-    const proj = h.project ? `[${h.project}] ` : '';
-    return `${i + 1}. ${h.time} ${proj}${h.detail || h.state}`;
+    return formatHistoryItem(h, i);
   }).join('\n');
 }
 
@@ -223,7 +219,7 @@ const sound = {
 
     for (const [name, path] of Object.entries(files)) {
       const audio = new Audio(path);
-      audio.preload = 'auto';
+      audio.preload = 'none';
       this.audioCache[name] = audio;
     }
   },
@@ -580,10 +576,9 @@ function playClick(zone) {
     // 头部：开心摸头
     particles.heart(cx, cy + 10);
     sound.play('click');
-    totalPetCount++;
     achievements.recordPet();
-    // 彩蛋 E7：摸头 100 次
-    if (totalPetCount === 100 && checkEasterEgg('pet100')) {
+    // 彩蛋 E7：摸头 100 次（使用持久化的计数，支持跨会话累计）
+    if (achievements.data.progress.pet_count === 100 && checkEasterEgg('pet100')) {
       setTimeout(() => {
         showBubble('你真的好喜欢我呢~ 💕', 4000);
         particles.sparkle(cx, cy);

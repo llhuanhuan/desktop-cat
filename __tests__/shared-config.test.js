@@ -22,6 +22,9 @@ const {
 describe('shared-config', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // 重置缓存
+    const { __resetCache } = require('../shared-config');
+    if (__resetCache) __resetCache();
   });
 
   describe('constants', () => {
@@ -54,6 +57,7 @@ describe('shared-config', () => {
       const mockConfig = { port: 3000, autoLaunch: false };
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
+      fs.statSync.mockReturnValue({ mtimeMs: 1000 });
 
       const config = loadConfig();
       expect(config).toEqual(mockConfig);
@@ -62,6 +66,7 @@ describe('shared-config', () => {
     test('should return empty object on JSON parse error', () => {
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue('invalid json');
+      fs.statSync.mockReturnValue({ mtimeMs: 1000 });
 
       const config = loadConfig();
       expect(config).toEqual({});
@@ -77,6 +82,7 @@ describe('shared-config', () => {
     test('should return config value when key exists', () => {
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue(JSON.stringify({ port: 3000 }));
+      fs.statSync.mockReturnValue({ mtimeMs: 1000 });
 
       expect(getConfig('port')).toBe(3000);
     });
@@ -92,6 +98,7 @@ describe('shared-config', () => {
     test('should merge config with defaults', () => {
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue(JSON.stringify({ port: 3000 }));
+      fs.statSync.mockReturnValue({ mtimeMs: 1000 });
 
       const config = getAllConfig();
       expect(config.port).toBe(3000);

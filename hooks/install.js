@@ -114,8 +114,10 @@ function install() {
     }
   }
 
-  // 写入配置
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  // 写入配置（原子写入：先写临时文件，再重命名）
+  const tmpFile = SETTINGS_FILE + '.tmp';
+  fs.writeFileSync(tmpFile, JSON.stringify(settings, null, 2), 'utf8');
+  fs.renameSync(tmpFile, SETTINGS_FILE);
 
   console.log('');
   console.log(`🎉 完成！新注册 ${registered} 个事件`);
@@ -166,7 +168,10 @@ function uninstall() {
     delete settings.hooks;
   }
 
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  // 写入配置（原子写入：先写临时文件，再重命名）
+  const tmpFile = SETTINGS_FILE + '.tmp';
+  fs.writeFileSync(tmpFile, JSON.stringify(settings, null, 2), 'utf8');
+  fs.renameSync(tmpFile, SETTINGS_FILE);
   console.log(`🗑️  已移除 ${removed} 个 hook`);
 }
 
