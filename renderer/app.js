@@ -34,6 +34,11 @@ let consecutiveSuccessCount = 0;
 let lastActivityTime = Date.now();
 const IDLE_THRESHOLD = 5 * 60 * 1000;
 
+// 定时器引用（用于退出时清理，防止页面重载后定时器累积泄漏）
+let achievementSaveTimer = null;
+let randomActionTimer = null;
+let bubbleTimer = null;
+
 // 时间感知
 function getTimeContext() {
   const hour = new Date().getHours();
@@ -246,12 +251,25 @@ const sound = {
     if (audio) {
       const clone = audio.cloneNode();
       clone.volume = 0.5;
-      clone.play().catch(() => {});
-      // 播放完成后清理克隆节点，防止 DOM 节点累积泄露
-      clone.addEventListener('ended', () => {
+
+      // 统一清理：释放解码缓冲区，移除监听器，断开引用以便 GC 回收
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { clone.pause(); } catch {}
+        clone.removeAttribute('src');
         clone.src = '';
-        clone.remove();
-      });
+        clone.removeEventListener('ended', cleanup);
+        clone.removeEventListener('error', cleanup);
+      };
+
+      clone.addEventListener('ended', cleanup);
+      clone.addEventListener('error', cleanup);
+      clone.play().catch(cleanup);
+
+      // 安全兜底：10 秒后强制清理，防止 ended/error 均未触发的边界场景
+      setTimeout(cleanup, 10000);
     }
   },
 
@@ -294,7 +312,7 @@ async function initAchievements() {
   });
 
   // 每分钟保存一次
-  setInterval(() => saveAchievements(), 60000);
+  achievementSaveTimer = setInterval(() => saveAchievements(), 60000);
 
   // 检查时间段成就
   achievements.recordTimeOfDay(new Date().getHours());
@@ -447,7 +465,8 @@ function showBubble(text, duration = 2000) {
   }
 
   bubble.classList.add('show');
-  setTimeout(() => bubble.classList.remove('show'), duration);
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => bubble.classList.remove('show'), duration);
 }
 
 // ============================================
@@ -488,6 +507,8 @@ function initDrag() {
   });
 
   document.addEventListener('mousemove', (e) => {
+    // 统一处理拖拽与活动追踪，避免重复注册高频监听器
+    lastActivityTime = Date.now();
     if (!isDragging) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
@@ -824,7 +845,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 随机动作（空闲时，DND 模式下跳过）
-  setInterval(() => {
+  randomActionTimer = setInterval(() => {
     if (dndMode) return;
 
     // 空闲检测：5 分钟无活动
@@ -859,13 +880,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }, 15000);
 
-  // 应用退出前释放 Blob URL
+  // 应用退出前释放资源
   window.addEventListener('beforeunload', () => {
     revokeAllBlobURLs();
+    // 清理所有定时器，防止页面重载后定时器累积泄漏
+    if (achievementSaveTimer) clearInterval(achievementSaveTimer);
+    if (randomActionTimer) clearInterval(randomActionTimer);
+    if (bubbleTimer) clearTimeout(bubbleTimer);
+    if (stateTimer) clearTimeout(stateTimer);
+    if (stateProtectTimer) clearTimeout(stateProtectTimer);
+    if (clickResetTimer) clearTimeout(clickResetTimer);
+    if (longPressTimer) clearTimeout(longPressTimer);
   });
 
-  // 全局活动追踪（空闲检测）
-  document.addEventListener('mousemove', () => { lastActivityTime = Date.now(); });
+  // 全局活动追踪（空闲检测）— mousemove 已在 initDrag 中统一处理
   document.addEventListener('keydown', () => { lastActivityTime = Date.now(); });
 
   console.log('[Desktop Cat] Initialized with 8 states + click-through + easter eggs + environment awareness');

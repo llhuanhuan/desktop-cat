@@ -65,5 +65,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   removeShowHistoryListener: () => {
     ipcRenderer.removeAllListeners('show-history');
+  },
+  removeAchievementUnlockedListener: () => {
+    ipcRenderer.removeAllListeners('achievement-unlocked');
   }
 });

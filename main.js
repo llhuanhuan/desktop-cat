@@ -12,6 +12,8 @@ let mainWindow;
 let tray;
 let server;            // HTTP 服务器引用（用于优雅退出）
 let dndMode = false;   // 免打扰模式
+let savePositionTimer = null;  // 窗口位置保存防抖计时器
+let isQuitting = false;        // 退出流程标志，防止 before-quit 递归
 
 // ============================================
 // 日志持久化
@@ -90,11 +92,12 @@ function createMainWindow() {
     app.quit();
   });
 
-  // 保存位置：移动结束时
+  // 保存位置：移动结束时防抖保存（避免拖动时频繁同步 I/O）
   mainWindow.on('move', () => {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
-      saveConfig({ x, y });
+      clearTimeout(savePositionTimer);
+      savePositionTimer = setTimeout(() => saveConfig({ x, y }), 300);
     }
   });
 }
@@ -464,8 +467,10 @@ if (gotTheLock) {
 
   // 优雅退出：先关 HTTP 服务器，再退出
   app.on('before-quit', async (e) => {
+    if (isQuitting) return;
     if (server) {
       e.preventDefault();
+      isQuitting = true;
       console.log('[Desktop Cat] Shutting down...');
       await stopNotificationServer();
       server = null;

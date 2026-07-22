@@ -23,6 +23,12 @@ class MockAudio {
     }
   }
 
+  removeAttribute() {
+    // 模拟 removeAttribute('src')
+  }
+
+  pause() {}
+
   play() {
     return Promise.resolve();
   }
@@ -30,6 +36,11 @@ class MockAudio {
   // 模拟播放结束
   _emitEnded() {
     (this._listeners['ended'] || []).forEach(cb => cb());
+  }
+
+  // 模拟播放错误
+  _emitError() {
+    (this._listeners['error'] || []).forEach(cb => cb());
   }
 
   cloneNode() {
@@ -71,11 +82,29 @@ function createSoundSystem() {
     if (audio) {
       const clone = audio.cloneNode();
       clone.volume = 0.5;
-      clone.play().catch(() => {});
-      // 修复：播放完成后清理克隆节点
-      clone.addEventListener('ended', () => {
+
+      // 修复：统一清理函数，处理 ended/error/超时三种场景
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { clone.pause(); } catch {}
+        clone.removeAttribute('src');
         clone.src = '';
-        clone.remove();
+        clone.removeEventListener('ended', cleanup);
+        clone.removeEventListener('error', cleanup);
+      };
+
+      clone.addEventListener('ended', cleanup);
+      clone.addEventListener('error', cleanup);
+      clone.play().catch(cleanup);
+
+      // 安全兜底：10 秒后强制清理
+      setTimeout(cleanup, 10000);
+
+      clone._cleaned = false;
+      Object.defineProperty(clone, '_isCleaned', {
+        get() { return cleaned; }
       });
       return clone;
     }
@@ -98,12 +127,29 @@ describe('Audio CloneNode Memory Leak Prevention', () => {
     const clone = sound.play('meow');
     expect(clone).toBeTruthy();
 
+    // 清理前：src 非空，未清理
+    expect(clone._isCleaned).toBe(false);
+
     // 模拟播放结束
     clone._emitEnded();
 
     // 验证节点被清理
     expect(clone.src).toBe('');
-    expect(clone._removed).toBe(true);
+    expect(clone._isCleaned).toBe(true);
+  });
+
+  test('error 事件也应触发克隆节点清理', () => {
+    const sound = createSoundSystem();
+    const clone = sound.play('meow');
+    expect(clone).toBeTruthy();
+
+    expect(clone._isCleaned).toBe(false);
+
+    // 模拟播放错误（play 失败场景）
+    clone._emitError();
+
+    expect(clone.src).toBe('');
+    expect(clone._isCleaned).toBe(true);
   });
 
   test('多次播放应产生多个独立克隆，每个都能被清理', () => {
@@ -128,7 +174,7 @@ describe('Audio CloneNode Memory Leak Prevention', () => {
     // 验证所有节点都被清理
     clones.forEach(clone => {
       expect(clone.src).toBe('');
-      expect(clone._removed).toBe(true);
+      expect(clone._isCleaned).toBe(true);
     });
   });
 
@@ -151,7 +197,18 @@ describe('Audio CloneNode Memory Leak Prevention', () => {
 
     // 节点未被清理 —— 这就是内存泄露的根源
     expect(clone.src).not.toBe('');
-    expect(clone._removed).toBeUndefined();
+  });
+
+  test('清理函数应幂等，重复调用不会出错', () => {
+    const sound = createSoundSystem();
+    const clone = sound.play('meow');
+
+    clone._emitEnded();
+    expect(clone._isCleaned).toBe(true);
+
+    // 再次触发 error 不应报错
+    clone._emitError();
+    expect(clone._isCleaned).toBe(true);
   });
 
   test('sound 模块缓存的原始 Audio 不应被修改', () => {
