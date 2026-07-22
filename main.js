@@ -181,7 +181,12 @@ function createTray() {
       label: '开机自启动',
       type: 'checkbox',
       checked: isAutoLaunchEnabled,
+      enabled: app.isPackaged, // 开发模式下禁用，避免误导
       click: (menuItem) => {
+        if (!app.isPackaged) {
+          menuItem.checked = false;
+          return;
+        }
         setAutoLaunch(menuItem.checked);
         saveConfig({ autoLaunch: menuItem.checked });
       }

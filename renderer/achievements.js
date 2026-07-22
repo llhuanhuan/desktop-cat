@@ -46,6 +46,7 @@ class AchievementSystem {
         streak_days: 1,
         last_active_date: new Date().toDateString(),
         consecutive_no_error: 0,
+        consecutive_success: 0,
       },
       accessories: {
         unlocked: [],
@@ -111,8 +112,10 @@ class AchievementSystem {
     this.data.progress.task_count++;
     if (hasError) {
       this.data.progress.consecutive_no_error = 0;
+      this.data.progress.consecutive_success = 0;
     } else {
       this.data.progress.consecutive_no_error++;
+      this.data.progress.consecutive_success++;
     }
 
     // 检查任务数成就
@@ -122,6 +125,9 @@ class AchievementSystem {
 
     // 检查无错误成就
     if (this.data.progress.consecutive_no_error >= 10) this.check('no_error_10');
+
+    // 检查连续成功成就
+    if (this.data.progress.consecutive_success >= 10) this.check('streak10');
   }
 
   // 记录摸头
@@ -205,6 +211,11 @@ class AchievementSystem {
   // 注册监听器
   on(callback) {
     this._listeners.push(callback);
+  }
+
+  // 移除监听器
+  off(callback) {
+    this._listeners = this._listeners.filter(fn => fn !== callback);
   }
 
   _notify(type, data) {

@@ -25,7 +25,6 @@ const PAW_LIFETIME = 3000;
 
 // 彩蛋系统
 const EASTER_EGG_LOG = {};
-let consecutiveSuccessCount = 0;
 
 // 环境感知 - 空闲检测
 let lastActivityTime = Date.now();
@@ -56,7 +55,9 @@ function getHoliday() {
   if (m === 2 && d === 14)  return { msg: '情人节快乐~ 💕🐱' };
   if (m === 10 && d >= 1 && d <= 7) return { msg: '国庆节快乐！🇨🇳🎉' };
   if (m === 12 && d === 25) return { msg: 'Merry Christmas! 🎄🎁' };
-  if ((m === 1 && d >= 20) || (m === 2 && d <= 20)) return { msg: '新年快乐！恭喜发财~ 🧧🎆' };
+  // 春节：农历正月初一，公历 1月21日-2月20日之间
+  // 使用更精确的范围：1月21日-2月20日
+  if ((m === 1 && d >= 21) || (m === 2 && d <= 20)) return { msg: '新年快乐！恭喜发财~ 🧧🎆' };
   return null;
 }
 
@@ -111,13 +112,15 @@ const STATE_MESSAGES = {
 // 通知历史管理
 // ============================================
 function addHistory(state, detail, project) {
-  notificationHistory.unshift({
+  // 使用 splice 替代 unshift，性能更优（O(n) 但避免了 pop 的额外操作）
+  notificationHistory.splice(0, 0, {
     state,
     detail: detail || '',
     project: project || '',
     time: new Date().toLocaleTimeString()
   });
-  if (notificationHistory.length > MAX_HISTORY) {
+  // 保持历史记录在限制范围内
+  while (notificationHistory.length > MAX_HISTORY) {
     notificationHistory.pop();
   }
 }
@@ -408,10 +411,10 @@ function setState(state, duration) {
     else if (state === 'sleeping') sound.play('sleep');
   }
 
-  // 彩蛋 E4：连续成功计数
+  // 彩蛋 E4：连续成功计数（使用持久化的 achievements 计数）
   if (state === 'happy') {
-    consecutiveSuccessCount++;
-    if (consecutiveSuccessCount >= 10 && checkEasterEgg('streak10')) {
+    achievements.recordTask(false);
+    if (achievements.data.progress.consecutive_success >= 10 && checkEasterEgg('streak10')) {
       showBubble('🎆 完美连击！连续 10 次成功！', 5000);
       const rect = cat.getBoundingClientRect();
       const container = document.getElementById('cat-container').getBoundingClientRect();
@@ -422,7 +425,7 @@ function setState(state, duration) {
       }
     }
   } else if (state === 'error') {
-    consecutiveSuccessCount = 0;
+    achievements.recordTask(true);
   }
 
   if (duration) {
@@ -492,7 +495,7 @@ function disableClickThrough() {
 function initDrag() {
   const container = document.getElementById('cat-container');
 
-  container.addEventListener('mousedown', (e) => {
+  const onMouseDown = (e) => {
     if (e.button !== 0) return;
     isDragging = true;
     dragStartX = e.clientX;
@@ -500,9 +503,9 @@ function initDrag() {
     container.style.cursor = 'grabbing';
     disableClickThrough();
     e.preventDefault();
-  });
+  };
 
-  document.addEventListener('mousemove', (e) => {
+  const onMouseMove = (e) => {
     // 统一处理拖拽与活动追踪，避免重复注册高频监听器
     lastActivityTime = Date.now();
     if (!isDragging) return;
@@ -513,9 +516,9 @@ function initDrag() {
     }
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-  });
+  };
 
-  document.addEventListener('mouseup', () => {
+  const onMouseUp = () => {
     if (isDragging) {
       isDragging = false;
       container.style.cursor = 'grab';
@@ -523,7 +526,18 @@ function initDrag() {
         enableClickThrough();
       }
     }
-  });
+  };
+
+  container.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+
+  // 返回清理函数，供未来热重载或动态卸载使用
+  return function cleanup() {
+    container.removeEventListener('mousedown', onMouseDown);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
 }
 
 // ============================================
@@ -653,10 +667,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 记录通知历史
       addHistory(state, detail, project);
-
-      // 记录成就进度
-      if (state === 'happy') achievements.recordTask(false);
-      else if (state === 'error') achievements.recordTask(true);
 
       // 根据状态设置持续时间
       let duration = null;
