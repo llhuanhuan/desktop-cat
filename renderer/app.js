@@ -247,6 +247,11 @@ const sound = {
       const clone = audio.cloneNode();
       clone.volume = 0.5;
       clone.play().catch(() => {});
+      // 播放完成后清理克隆节点，防止 DOM 节点累积泄露
+      clone.addEventListener('ended', () => {
+        clone.src = '';
+        clone.remove();
+      });
     }
   },
 

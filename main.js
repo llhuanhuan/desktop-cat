@@ -242,8 +242,20 @@ function startNotificationServer() {
 
     if (req.method === 'POST' && req.url === '/state') {
       let body = '';
-      req.on('data', chunk => { body += chunk.toString(); });
+      let aborted = false;
+      const MAX_BODY_SIZE = 64 * 1024; // 64KB 上限，防止恶意/异常请求撑爆内存
+      req.on('data', chunk => {
+        if (aborted) return;
+        body += chunk.toString();
+        if (body.length > MAX_BODY_SIZE) {
+          aborted = true;
+          req.pause(); // 暂停接收数据，而非 destroy（避免 socket hang up）
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Payload too large' }));
+        }
+      });
       req.on('end', () => {
+        if (aborted) return;
         try {
           const data = JSON.parse(body);
           const { state, event, detail, project } = data;
@@ -261,8 +273,20 @@ function startNotificationServer() {
     } else if (req.method === 'POST') {
       // 兼容旧的通知接口
       let body = '';
-      req.on('data', chunk => { body += chunk.toString(); });
+      let aborted = false;
+      const MAX_BODY_SIZE_LEGACY = 64 * 1024;
+      req.on('data', chunk => {
+        if (aborted) return;
+        body += chunk.toString();
+        if (body.length > MAX_BODY_SIZE_LEGACY) {
+          aborted = true;
+          req.pause();
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Payload too large' }));
+        }
+      });
       req.on('end', () => {
+        if (aborted) return;
         try {
           const data = JSON.parse(body);
           let project = data.project || '';
